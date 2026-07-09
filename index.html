@@ -154,6 +154,90 @@
     if (t==null || c==null || isNaN(t) || isNaN(c) || c===0) return null;
     return (t-c)/c*100;
   }
+  function fmtPct(p){
+    if (p===null || p===undefined || isNaN(p)) return '—';
+    return `${p>0?'+':''}${p.toFixed(1)}%`;
+  }
+  function generateInsights(row, prevWeek, yoyWeek){
+    const items = [];
+    const compares = [];
+    if (yoyWeek) compares.push({label:'전년동기', row: yoyWeek.row});
+    if (prevWeek) compares.push({label:'전전주', row: prevWeek.row});
+    if (compares.length === 0){
+      items.push('비교 가능한 과거 데이터가 없어 인사이트를 생성할 수 없습니다.');
+      if (row.보정적용) items.push('⚠️ 최근 일자 데이터는 미반납 차량 보정 예측치가 포함되어 있어 추후 소폭 조정될 수 있습니다.');
+      return items;
+    }
+    const primary = compares[0];
+    const c = primary.row;
+
+    // ① 매출 동인 분해 (총매출 = 차량수 × 차량당매출)
+    if (row.차량수 && c.차량수 && row.차량당매출!=null && c.차량당매출!=null){
+      const deltaRev = row.총매출 - c.총매출;
+      const supply = (row.차량수 - c.차량수) * c.차량당매출;
+      const eff = row.차량수 * (row.차량당매출 - c.차량당매출);
+      const p = pct(row.총매출, c.총매출);
+      let driver;
+      if (Math.abs(deltaRev) === 0) driver = '변화 미미';
+      else if (Math.abs(supply) >= 0.6*Math.abs(deltaRev)) driver = `차량수 변화(${row.차량수-c.차량수>=0?'+':''}${(row.차량수-c.차량수).toFixed(0)}대)가 주요 원인`;
+      else if (Math.abs(eff) >= 0.6*Math.abs(deltaRev)) driver = `차량당매출 변화(${fmtNum(row.차량당매출-c.차량당매출,0)}원/대)가 주요 원인`;
+      else driver = '차량수·차량당매출 변화가 복합적으로 작용';
+      items.push(`<b>① 매출 동인</b> — 총매출 ${fmtPct(p)} (${primary.label} 대비): ${driver}.`);
+    }
+
+    // ② 차량유형별 최대 변동
+    {
+      const tT = row.차량유형별 || {}, tC = c.차량유형별 || {};
+      let best = null;
+      Object.keys(tT).forEach(k => {
+        const cntT = tT[k] ? tT[k].건수 : 0;
+        const cntC = tC[k] ? tC[k].건수 : 0;
+        if (cntT < 15 && cntC < 15) return;
+        const p = pct(cntT, cntC);
+        if (p===null) return;
+        if (!best || Math.abs(p) > Math.abs(best.p)) best = {type:k, cntT, cntC, p};
+      });
+      if (best) items.push(`<b>② 차량유형 변동</b> — '${best.type}' 건수 ${fmtPct(best.p)} (${best.cntC}건→${best.cntT}건, ${primary.label} 대비)로 가장 큰 변동.`);
+    }
+
+    // ③ 지역별 비중 변화
+    {
+      const rT = row.지역별 || {}, rC = c.지역별 || {};
+      const totalT = Object.values(rT).reduce((a,b)=>a+b,0) || 1;
+      const totalC = Object.values(rC).reduce((a,b)=>a+b,0) || 1;
+      let best = null;
+      Object.keys(rT).forEach(k => {
+        const diff = (rT[k]||0)/totalT*100 - (rC[k]||0)/totalC*100;
+        if (!best || Math.abs(diff) > Math.abs(best.diff)) best = {region:k, shareT:(rT[k]||0)/totalT*100, shareC:(rC[k]||0)/totalC*100, diff};
+      });
+      if (best && Math.abs(best.diff) >= 0.5) items.push(`<b>③ 지역 비중 변화</b> — '${best.region}' 비중 ${best.shareC.toFixed(1)}%→${best.shareT.toFixed(1)}% (${best.diff>=0?'+':''}${best.diff.toFixed(1)}%p, ${primary.label} 대비).`);
+    }
+
+    // ④ 이용시간 구간 비중 변화
+    {
+      const dT = row.이용시간구간별 || {}, dC = c.이용시간구간별 || {};
+      const totalT = Object.values(dT).reduce((a,b)=>a+b,0) || 1;
+      const totalC = Object.values(dC).reduce((a,b)=>a+b,0) || 1;
+      let best = null;
+      Object.keys(dT).forEach(k => {
+        const diff = (dT[k]||0)/totalT*100 - (dC[k]||0)/totalC*100;
+        if (!best || Math.abs(diff) > Math.abs(best.diff)) best = {bucket:k, diff};
+      });
+      if (best && Math.abs(best.diff) >= 1) items.push(`<b>④ 이용시간 패턴</b> — '${best.bucket}' 비중 ${best.diff>=0?'+':''}${best.diff.toFixed(1)}%p 변화 (${primary.label} 대비) — ${best.diff>0?'해당 구간 이용 증가':'해당 구간 이용 감소'}.`);
+    }
+
+    // ⑤ 가동 효율 트렌드
+    if (row.차량당건수!=null && c.차량당건수!=null){
+      const p = pct(row.차량당건수, c.차량당건수);
+      if (p!==null && Math.abs(p) >= 3){
+        items.push(`<b>⑤ 가동 효율</b> — 차량당건수 ${row.차량당건수.toFixed(2)}건/대로 ${primary.label} 대비 ${fmtPct(p)} — ${p>0?'가동률 개선':'가동률 저하'} 신호.`);
+      }
+    }
+
+    if (row.보정적용) items.push('⚠️ 최근 일자 데이터는 미반납 차량 보정 예측치가 포함되어 있어 추후 소폭 조정될 수 있습니다.');
+    if (items.length === 0) items.push('이번 주는 특별한 변동 없이 안정적인 추세입니다.');
+    return items;
+  }
   function deltaSpan(t, c){
     const p = pct(t,c);
     if (p===null) return '<span style="color:#aaa">—</span>';
@@ -203,8 +287,8 @@
       data: {
         labels,
         datasets: [
-          { type:'bar', label:'건수', data: rows.map(r=>r.건수), backgroundColor:'#bcd2f2', yAxisID:'y' },
-          { type:'line', label:'총매출', data: rows.map(r=>r.총매출), borderColor:'#d0342c', backgroundColor:'#d0342c', yAxisID:'y1', tension:0.25, pointRadius:2 },
+          { type:'line', label:'건수', data: rows.map(r=>r.건수), borderColor:'#2266cc', backgroundColor:'#2266cc', yAxisID:'y', tension:0.25, pointRadius:2 },
+          { type:'bar', label:'총매출', data: rows.map(r=>r.총매출), backgroundColor:'#f2c6bc', yAxisID:'y1' },
         ]
       },
       options: {
@@ -256,106 +340,13 @@
     });
     kpiHtml += '</div>';
 
+    const insightItems = generateInsights(row, prevWeek, yoyWeek);
+    const insightsHtml = insightItems.map(s => `<li>${s}</li>`).join('');
+
     const html = `
       ${kpiHtml}
       <div class="section">
-        <h2>⏰ 출발시간대별 (0~23시) — 이번 주 vs 전년동기</h2>
-        <div class="chart-box"><canvas id="chartHour"></canvas></div>
-      </div>
-      <div class="charts-row">
-        <div class="section">
-          <h2>🚙 차량유형별 건수 — 이번 주 vs 전년동기</h2>
-          <div class="chart-box tall"><canvas id="chartType"></canvas></div>
-        </div>
-        <div class="section">
-          <h2>📍 지역별 건수 (Top10+기타) — 이번 주 vs 전년동기</h2>
-          <div class="chart-box tall"><canvas id="chartRegion"></canvas></div>
-        </div>
+        <h2>🧠 종합 인사이트</h2>
+        <ul class="insight-list">${insightsHtml}</ul>
       </div>
       <div class="section">
-        <h2>⏱ 이용시간 구간별 건수 — 이번 주 vs 전년동기</h2>
-        <div class="chart-box"><canvas id="chartDuration"></canvas></div>
-      </div>
-      <div class="section">
-        <h2>🔎 비교 기준 안내</h2>
-        <ul class="insight-list">
-          <li><b>분석 대상 주</b> — ${row.주시작일} ~ ${row.주종료일} (월~일)</li>
-          <li><b>전전주</b> — ${prevWeek ? `${prevWeek.row.주시작일} ~ ${prevWeek.row.주종료일}` : '데이터 없음'}</li>
-          <li><b>전년동기</b> — ${yoyWeek ? `${yoyWeek.row.주시작일} ~ ${yoyWeek.row.주종료일} (364일 전, 동일 요일 기준)` : '데이터 없음'}</li>
-          ${row.보정적용 ? '<li>⚠️ 이번 주 최근 일자 데이터는 미반납 차량의 주행매출·총매출·건당운행거리에 회귀 보정값이 포함될 수 있습니다 (* 표시 지표).</li>' : ''}
-        </ul>
-      </div>
-    `;
-    content.innerHTML = html;
-
-    const hourLabels = Array.from({length:24}, (_,i)=>i+'시');
-    const hourDatasets = [{ label: `이번 주 (${shortRange(row)})`, data: row.시간대별, backgroundColor: COLORS[0] }];
-    if (yoyWeek) hourDatasets.push({ label: `전년동기 (${shortRange(yoyWeek.row)})`, data: yoyWeek.row.시간대별, backgroundColor: COLORS[1] });
-    barChart('chartHour', hourLabels, hourDatasets);
-
-    const typeEntries = topN(Object.fromEntries(Object.entries(row.차량유형별).map(([k,v])=>[k,v.건수])), 20);
-    const typeLabels = typeEntries.map(e=>e[0]);
-    const typeDatasets = [{ label: '이번 주', data: typeEntries.map(e=>e[1]), backgroundColor: COLORS[0] }];
-    if (yoyWeek){
-      const yoyTypeMap = Object.fromEntries(Object.entries(yoyWeek.row.차량유형별).map(([k,v])=>[k,v.건수]));
-      typeDatasets.push({ label: '전년동기', data: typeLabels.map(l=>yoyTypeMap[l]||0), backgroundColor: COLORS[1] });
-    }
-    barChart('chartType', typeLabels, typeDatasets, { indexAxis: 'y' });
-
-    const regionEntries = Object.entries(row.지역별).sort((a,b)=>b[1]-a[1]);
-    const regionLabels = regionEntries.map(e=>e[0]);
-    const regionDatasets = [{ label: '이번 주', data: regionEntries.map(e=>e[1]), backgroundColor: COLORS[0] }];
-    if (yoyWeek){
-      const yoyRegionMap = yoyWeek.row.지역별;
-      regionDatasets.push({ label: '전년동기', data: regionLabels.map(l=>yoyRegionMap[l]||0), backgroundColor: COLORS[1] });
-    }
-    barChart('chartRegion', regionLabels, regionDatasets, { indexAxis: 'y' });
-
-    const durOrder = ['3h미만','3~6h','6~12h','12~24h','24~48h','48~72h','72h+'];
-    const durLabels = durOrder.filter(k => row.이용시간구간별.hasOwnProperty(k));
-    const durDatasets = [{ label: '이번 주', data: durLabels.map(k=>row.이용시간구간별[k]), backgroundColor: COLORS[0] }];
-    if (yoyWeek){
-      durDatasets.push({ label: '전년동기', data: durLabels.map(k=>(yoyWeek.row.이용시간구간별||{})[k]||0), backgroundColor: COLORS[1] });
-    }
-    barChart('chartDuration', durLabels, durDatasets);
-
-    document.getElementById('footNote').textContent =
-      `이 대시보드는 대여내역 원본 데이터를 기반으로 매주 월요일 자동 갱신됩니다. 최근 데이터는 미반납 차량 보정 예측치가 포함될 수 있습니다.`;
-
-    localStorage.setItem('wsr_last_week', weekStart);
-  }
-
-  const select = document.getElementById('weekSelect');
-  ALL_WEEKS.slice().reverse().forEach(w => {
-    const r = DATA_MAP[w];
-    const opt = document.createElement('option');
-    opt.value = w;
-    opt.textContent = `${w} ~ ${r.주종료일}`;
-    select.appendChild(opt);
-  });
-
-  function goWeek(w){
-    select.value = w;
-    render(w);
-  }
-
-  select.addEventListener('change', () => render(select.value));
-  document.getElementById('prevBtn').addEventListener('click', () => {
-    const idx = ALL_WEEKS.indexOf(select.value);
-    if (idx > 0) goWeek(ALL_WEEKS[idx-1]);
-  });
-  document.getElementById('nextBtn').addEventListener('click', () => {
-    const idx = ALL_WEEKS.indexOf(select.value);
-    if (idx >= 0 && idx < ALL_WEEKS.length-1) goWeek(ALL_WEEKS[idx+1]);
-  });
-  document.getElementById('latestBtn').addEventListener('click', () => goWeek(MAX_WEEK));
-
-  renderTrend();
-  const saved = localStorage.getItem('wsr_last_week');
-  const initial = (saved && DATA_MAP[saved]) ? saved : MAX_WEEK;
-  goWeek(initial);
-})();
-</script>
-
-</body>
-</html>
