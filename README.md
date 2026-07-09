@@ -7,3 +7,5 @@
 - GitHub Pages로 호스팅
 
 Live: https://songjungseok.github.io/weekly-sales-dashboard/
+
+_Last redeploy trigger: 2026-07-09T07:24:00Z_
