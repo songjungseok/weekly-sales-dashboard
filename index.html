@@ -590,6 +590,25 @@
     return entries.slice(0,n);
   }
 
+  // 항목이 너무 많을 때(차량유형, 지역 등) 라벨 가독성을 위해
+  // 건수 기준 상위 N개 + 비교시점 대비 변화율(|%|) 기준 상위 M개(상위 N에 없는 항목 중)를 합쳐 반환한다.
+  function topByCountAndChange(curMap, compMap, n, m){
+    const sorted = Object.entries(curMap).sort((a,b)=>b[1]-a[1]);
+    const topLabels = sorted.slice(0, n).map(e=>e[0]);
+    let changeLabels = [];
+    if (compMap){
+      const rest = Object.keys(curMap).filter(k => !topLabels.includes(k));
+      const changeEntries = rest.map(k => {
+        const c = curMap[k]||0, p = compMap[k]||0;
+        const p_ = pct(c, p);
+        return [k, p_===null ? null : Math.abs(p_)];
+      }).filter(e => e[1] !== null).sort((a,b)=>b[1]-a[1]);
+      changeLabels = changeEntries.slice(0, m).map(e=>e[0]);
+    }
+    const combined = [...topLabels, ...changeLabels];
+    return combined.sort((a,b) => (curMap[b]||0) - (curMap[a]||0));
+  }
+
   function barChart(ctxId, labels, datasets, opts){
     const el = document.getElementById(ctxId);
     if (!el) return;
@@ -722,11 +741,11 @@
       </div>
       <div class="charts-row">
         <div class="section">
-          <h2>🚙 차량유형별 건수 — 전년동기 vs 이번 주</h2>
+          <h2>🚙 차량유형별 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
           <div class="chart-box tall"><canvas id="chartType"></canvas></div>
         </div>
         <div class="section">
-          <h2>📍 지역별 건수 (Top10+기타) — 전년동기 vs 이번 주</h2>
+          <h2>📍 지역별 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
           <div class="chart-box tall"><canvas id="chartRegion"></canvas></div>
         </div>
       </div>
@@ -753,24 +772,30 @@
     hourDatasets.push({ label: `이번 주 (${shortRange(row)})`, data: row.시간대별, backgroundColor: COLORS[0] });
     barChart('chartHour', hourLabels, hourDatasets);
 
-    const typeEntries = topN(Object.fromEntries(Object.entries(row.차량유형별).map(([k,v])=>[k,v.건수])), 20);
-    const typeLabels = typeEntries.map(e=>e[0]);
+    // 차량유형: 건수 Top5 + 변화율(전년동기 우선, 없으면 전주) 기준 Top3 — 항목이 많아 라벨이 겹치는 문제 방지
+    const curTypeMap = Object.fromEntries(Object.entries(row.차량유형별).map(([k,v])=>[k,v.건수]));
+    const compTypeWeek = yoyWeek || prevWeek;
+    const compTypeMap = compTypeWeek ? Object.fromEntries(Object.entries(compTypeWeek.row.차량유형별).map(([k,v])=>[k,v.건수])) : null;
+    const typeLabels = topByCountAndChange(curTypeMap, compTypeMap, 5, 3);
     const typeDatasets = [];
     if (yoyWeek){
       const yoyTypeMap = Object.fromEntries(Object.entries(yoyWeek.row.차량유형별).map(([k,v])=>[k,v.건수]));
       typeDatasets.push({ label: '전년동기', data: typeLabels.map(l=>yoyTypeMap[l]||0), backgroundColor: COLORS[1] });
     }
-    typeDatasets.push({ label: '이번 주', data: typeEntries.map(e=>e[1]), backgroundColor: COLORS[0] });
+    typeDatasets.push({ label: '이번 주', data: typeLabels.map(l=>curTypeMap[l]||0), backgroundColor: COLORS[0] });
     barChart('chartType', typeLabels, typeDatasets, { indexAxis: 'y' });
 
-    const regionEntries = Object.entries(row.지역별).sort((a,b)=>b[1]-a[1]);
-    const regionLabels = regionEntries.map(e=>e[0]);
+    // 지역: 건수 Top5 + 변화율(전년동기 우선, 없으면 전주) 기준 Top3
+    const curRegionMap = row.지역별;
+    const compRegionWeek = yoyWeek || prevWeek;
+    const compRegionMap = compRegionWeek ? compRegionWeek.row.지역별 : null;
+    const regionLabels = topByCountAndChange(curRegionMap, compRegionMap, 5, 3);
     const regionDatasets = [];
     if (yoyWeek){
       const yoyRegionMap = yoyWeek.row.지역별;
       regionDatasets.push({ label: '전년동기', data: regionLabels.map(l=>yoyRegionMap[l]||0), backgroundColor: COLORS[1] });
     }
-    regionDatasets.push({ label: '이번 주', data: regionEntries.map(e=>e[1]), backgroundColor: COLORS[0] });
+    regionDatasets.push({ label: '이번 주', data: regionLabels.map(l=>curRegionMap[l]||0), backgroundColor: COLORS[0] });
     barChart('chartRegion', regionLabels, regionDatasets, { indexAxis: 'y' });
 
     const durOrder = ['3h미만','3~6h','6~12h','12~24h','24~48h','48~72h','72h+'];
