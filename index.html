@@ -552,32 +552,112 @@
       }
     }
 
-    // ⑥ 대여단가/할인율 분석 — 정가(예약요금관리자) 대비 실결제(대여매출) 할인폭 확대로 시간당 대여매출이 하락하는지 점검
-    // (전주 대비로 우선 점검 — 할인 정책 변화는 계절 요인이 큰 전년동기보다 전주 비교가 더 적합)
+    // ⑥ 특이 지표 자동 감지 — 매번 같은 항목이 아니라, 이번 주에 유독 튀는 지표를 찾아서 알려줌
+    // 건수/매출 총량이 아닌 '단가·비중·구성비' 계열 파생 지표들을 전주·전년동기와 비교해
+    // 임계치를 넘는 변화가 있으면 점수화(임계치 대비 초과 배수)해서 가장 두드러진 것만 노출한다.
     {
-      const compW = prevWeek || yoyWeek;
-      if (compW){
-        const c6 = compW.row;
-        if (row.예약요금관리자합계 && c6.예약요금관리자합계 && row.총이용시간 && c6.총이용시간){
-          const discT = 1 - (row.대여매출 / row.예약요금관리자합계);
-          const discC = 1 - (c6.대여매출 / c6.예약요금관리자합계);
-          const hourlyT = row.대여매출 / row.총이용시간;
-          const hourlyC = c6.대여매출 / c6.총이용시간;
-          const hourlyPct = pct(hourlyT, hourlyC);
-          const discPtDiff = (discT - discC) * 100;
-          if (hourlyPct !== null && hourlyPct <= -8 && discPtDiff >= 1){
-            const revPct = pct(row.총매출, c6.총매출);
-            const rentPct = pct(row.대여매출, c6.대여매출);
-            const insPct = pct(row.보험매출, c6.보험매출);
-            const drvPct = pct(row.주행매출, c6.주행매출);
-            let compose = '';
-            if (revPct !== null && revPct >= 0 && rentPct !== null && rentPct < revPct){
-              compose = ` 반면 보험매출(${fmtPct(insPct)})·주행매출(${fmtPct(drvPct)})이 총매출(${fmtPct(revPct)})을 대신 견인.`;
-            }
-            const compLabel = compW === prevWeek ? '전주' : '전년동기';
-            items.push(`<b>⑥ 대여단가 할인폭 확대로 시간당 대여매출 하락</b> — 정가(예약요금관리자) 대비 할인율이 ${compLabel} 대비 ${(discC*100).toFixed(1)}%→${(discT*100).toFixed(1)}%로 ${discPtDiff.toFixed(1)}%p 확대되며 시간당 대여매출이 ${Math.round(hourlyC).toLocaleString('ko-KR')}원→${Math.round(hourlyT).toLocaleString('ko-KR')}원(${fmtPct(hourlyPct)})으로 하락.${compose}`);
+      const anomalies = [];
+      const compsForAnomaly = [];
+      if (prevWeek) compsForAnomaly.push({label:'전주', row: prevWeek.row});
+      if (yoyWeek) compsForAnomaly.push({label:'전년동기', row: yoyWeek.row});
+
+      function tryMetric(name, getter, kind, threshold, fmt){
+        let best = null;
+        compsForAnomaly.forEach(cw => {
+          const vT = getter(row), vC = getter(cw.row);
+          if (vT==null || vC==null || isNaN(vT) || isNaN(vC)) return;
+          let diff, ok;
+          if (kind === 'pct'){
+            diff = pct(vT, vC);
+            ok = diff !== null && Math.abs(diff) >= threshold;
+          } else { // 'pp' — vT/vC는 0~1 비율, %p 차이로 비교
+            diff = (vT - vC) * 100;
+            ok = Math.abs(diff) >= threshold;
           }
-        }
+          if (ok){
+            const score = Math.abs(diff) / threshold;
+            if (!best || score > best.score) best = {name, vT, vC, diff, kind, fmt, compLabel: cw.label, score};
+          }
+        });
+        if (best) anomalies.push(best);
+      }
+
+      const safeDiv = (a,b) => (b ? a/b : null);
+
+      // 매출 구성비 (대여/보험/주행 비중)
+      tryMetric('대여매출 비중', r => safeDiv(r.대여매출, r.총매출), 'pp', 4);
+      tryMetric('보험매출 비중', r => safeDiv(r.보험매출, r.총매출), 'pp', 3);
+      tryMetric('주행매출 비중', r => safeDiv(r.주행매출, r.총매출), 'pp', 3);
+      // 건당/시간당 단가
+      tryMetric('건당 대여매출', r => safeDiv(r.대여매출, r.건수), 'pct', 12);
+      tryMetric('건당 보험매출', r => safeDiv(r.보험매출, r.건수), 'pct', 12);
+      tryMetric('건당 주행매출', r => safeDiv(r.주행매출, r.건수), 'pct', 12);
+      tryMetric('시간당 대여매출', r => safeDiv(r.대여매출, r.총이용시간), 'pct', 10);
+      // 정가(예약요금관리자) 대비 할인율 — 데이터가 있는 주에서만 계산됨
+      tryMetric('정가 대비 할인율', r => (r.예약요금관리자합계 ? (1 - safeDiv(r.대여매출, r.예약요금관리자합계)) : null), 'pp', 1);
+
+      // 지역별 최대 변동 (표본이 너무 적은 지역은 노이즈이므로 제외)
+      {
+        let bestRegion = null;
+        compsForAnomaly.forEach(cw => {
+          Object.keys(row.지역별||{}).forEach(reg => {
+            const vT = row.지역별[reg], vC = (cw.row.지역별||{})[reg];
+            if (!vC || vC < 30) return;
+            const p = pct(vT, vC);
+            if (p===null || Math.abs(p) < 30) return;
+            const score = Math.abs(p)/30;
+            if (!bestRegion || score > bestRegion.score) bestRegion = {name:'지역별 건수', region:reg, vT, vC, diff:p, kind:'pct', compLabel:cw.label, score};
+          });
+        });
+        if (bestRegion) anomalies.push(bestRegion);
+      }
+
+      // 이용시간구간별 비중 최대 변동
+      {
+        let bestDur = null;
+        compsForAnomaly.forEach(cw => {
+          const tTotal = Object.values(row.이용시간구간별||{}).reduce((a,v)=>a+v,0) || 1;
+          const cTotal = Object.values(cw.row.이용시간구간별||{}).reduce((a,v)=>a+v,0) || 1;
+          Object.keys(row.이용시간구간별||{}).forEach(b => {
+            const vT = (row.이용시간구간별[b]||0)/tTotal;
+            const vC = ((cw.row.이용시간구간별||{})[b]||0)/cTotal;
+            const diff = (vT-vC)*100;
+            if (Math.abs(diff) < 3) return;
+            const score = Math.abs(diff)/3;
+            if (!bestDur || score > bestDur.score) bestDur = {name:'이용시간구간 비중', region:b, vT, vC, diff, kind:'pp', compLabel:cw.label, score};
+          });
+        });
+        if (bestDur) anomalies.push(bestDur);
+      }
+
+      anomalies.sort((a,b) => b.score - a.score);
+      const top = anomalies.slice(0, 4);
+
+      if (top.length){
+        const revPct = prevWeek ? pct(row.총매출, prevWeek.row.총매출) : (yoyWeek ? pct(row.총매출, yoyWeek.row.총매출) : null);
+        const rentPct = prevWeek ? pct(row.대여매출, prevWeek.row.대여매출) : (yoyWeek ? pct(row.대여매출, yoyWeek.row.대여매출) : null);
+        const insPct = prevWeek ? pct(row.보험매출, prevWeek.row.보험매출) : (yoyWeek ? pct(row.보험매출, yoyWeek.row.보험매출) : null);
+        const drvPct = prevWeek ? pct(row.주행매출, prevWeek.row.주행매출) : (yoyWeek ? pct(row.주행매출, yoyWeek.row.주행매출) : null);
+
+        const CIRCLED = ['⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
+        top.forEach((a, idx) => {
+          const num = CIRCLED[idx] || String(idx+6); // ①~⑤ 다음 번호부터 이어서 표기
+          let text;
+          if (a.kind === 'pp'){
+            const label = a.region ? `${a.name}(${a.region})` : a.name;
+            text = `${label}이 ${a.compLabel} 대비 ${(a.vC*100).toFixed(1)}%→${(a.vT*100).toFixed(1)}%로 ${a.diff>=0?'+':''}${a.diff.toFixed(1)}%p 변동`;
+          } else if (a.name === '지역별 건수'){
+            text = `${a.region} 지역 건수가 ${a.compLabel} 대비 ${Math.round(a.vC).toLocaleString('ko-KR')}건→${Math.round(a.vT).toLocaleString('ko-KR')}건(${fmtPct(a.diff)})으로 변동`;
+          } else {
+            text = `${a.name}이 ${a.compLabel} 대비 ${Math.round(a.vC).toLocaleString('ko-KR')}원→${Math.round(a.vT).toLocaleString('ko-KR')}원(${fmtPct(a.diff)})으로 변동`;
+          }
+          // 매출 구성비 계열 지표는, 있으면 "무엇이 대신 견인했는지" 한 줄 덧붙임
+          let compose = '';
+          if ((a.name==='대여매출 비중' || a.name==='건당 대여매출' || a.name==='시간당 대여매출' || a.name==='정가 대비 할인율') && a.diff < 0 && revPct!==null && rentPct!==null && revPct >= rentPct){
+            compose = ` (반면 보험매출 ${fmtPct(insPct)}, 주행매출 ${fmtPct(drvPct)}로 총매출 ${fmtPct(revPct)} 견인)`;
+          }
+          items.push(`<b>${num} 특이 지표 — ${a.name} 변동</b> — ${text}.${compose}`);
+        });
       }
     }
 
