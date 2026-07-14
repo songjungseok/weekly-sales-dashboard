@@ -727,14 +727,47 @@
     return combined.sort((a,b) => (curMap[b]||0) - (curMap[a]||0));
   }
 
-  function barChart(ctxId, labels, datasets, opts){
+  function barChart(ctxId, labels, datasets, opts, sideLabels){
     const el = document.getElementById(ctxId);
     if (!el) return;
+    const chartPlugins = [];
+    if (sideLabels){
+      // 막대(기본적으로 마지막 데이터셋 = "이번 주") 끝에 보조 텍스트(예: 차량수 변화)를 그려주는 인라인 플러그인.
+      // 외부 라이브러리 없이 Chart.js 기본 플러그인 훅만 사용.
+      chartPlugins.push({
+        id: `sideLabels_${ctxId}`,
+        afterDatasetsDraw(chart){
+          const dsIndex = datasets.length - 1;
+          const meta = chart.getDatasetMeta(dsIndex);
+          if (!meta || !meta.data) return;
+          const ctx2 = chart.ctx;
+          const isHorizontal = chart.options.indexAxis === 'y';
+          ctx2.save();
+          ctx2.font = '10px sans-serif';
+          ctx2.fillStyle = '#888';
+          ctx2.textBaseline = 'middle';
+          meta.data.forEach((bar, i) => {
+            const label = sideLabels[i];
+            if (label == null || !bar) return;
+            if (isHorizontal){
+              ctx2.textAlign = 'left';
+              ctx2.fillText(label, bar.x + 6, bar.y);
+            } else {
+              ctx2.textAlign = 'center';
+              ctx2.fillText(label, bar.x, bar.y - 8);
+            }
+          });
+          ctx2.restore();
+        }
+      });
+    }
     const chart = new Chart(el.getContext('2d'), {
       type: 'bar',
       data: { labels, datasets },
+      plugins: chartPlugins,
       options: Object.assign({
         responsive: true, maintainAspectRatio: false,
+        layout: sideLabels ? { padding: { right: 46 } } : undefined,
         plugins: { legend: { display: datasets.length>1, position:'top', labels:{boxWidth:12,font:{size:11}} } },
         scales: { y: { beginAtZero: true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:10}} } }
       }, opts || {})
@@ -936,13 +969,21 @@
     const regionLabels = topByCountAndChange(curRegionMap, compRegionMap, 5, 3);
     const curRegionVeh = row.지역별차량수 || {};
     const regionDatasets = [];
+    let regionSideLabels = null;
     if (yoyWeek){
       const yoyRegionMap = yoyWeek.row.지역별;
       const yoyRegionVeh = yoyWeek.row.지역별차량수 || {};
       regionDatasets.push({ label: '전년동기', data: regionLabels.map(l=>perVeh(yoyRegionMap[l]||0, yoyRegionVeh[l])), backgroundColor: COLORS[1] });
+      // 막대 옆에 표시할 "차량수 변화"(이번 주 대비 전년동기 활성차량수 증감) — 대당건수 변화를 차량수 변화와 함께 보기 위함
+      regionSideLabels = regionLabels.map(l => {
+        const vT = curRegionVeh[l], vC = yoyRegionVeh[l];
+        if (vT==null || vC==null) return '차량 —';
+        const diff = vT - vC;
+        return `차량 ${vC}→${vT}대 (${diff>=0?'+':''}${diff})`;
+      });
     }
     regionDatasets.push({ label: '이번 주', data: regionLabels.map(l=>perVeh(curRegionMap[l]||0, curRegionVeh[l])), backgroundColor: COLORS[0] });
-    barChart('chartRegion', regionLabels, regionDatasets, { indexAxis: 'y' });
+    barChart('chartRegion', regionLabels, regionDatasets, { indexAxis: 'y' }, regionSideLabels);
 
     const durOrder = ['3h미만','3~6h','6~12h','12~24h','24~48h','48~72h','72h+'];
     const durLabels = durOrder.filter(k => row.이용시간구간별.hasOwnProperty(k));
