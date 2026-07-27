@@ -81,6 +81,13 @@
     display: inline-block; font-size: 10.5px; font-weight: 700; color: #fff; background: #e9a23b;
     border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
   }
+  .tab-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .tab-btn {
+    border: none; background: #eef0f2; color: #444; font-size: 13px; font-weight: 600;
+    padding: 7px 16px; border-radius: 999px; cursor: pointer; font-family: inherit;
+  }
+  .tab-btn:hover { background: #e2e4e7; }
+  .tab-btn.active { background: #1a2b3c; color: #fff; }
   .foot { text-align: center; color: #999; font-size: 11.5px; margin-top: 24px; }
 </style>
 </head>
@@ -109,8 +116,13 @@
 </div>
 
 <div class="section">
-  <h2>📊 주간 트렌드 — 대당매출 (전년동기 vs 이번 해)</h2>
-  <div class="chart-box"><canvas id="chartTrendRevPerCar"></canvas></div>
+  <h2>📊 주간 트렌드 — 상세 지표 (전년동기 vs 이번 해)</h2>
+  <div class="tab-bar" id="trendTabBar">
+    <button class="tab-btn active" data-tab="revpercar">대당매출</button>
+    <button class="tab-btn" data-tab="duration">이용시간 구간</button>
+  </div>
+  <div class="chart-box" id="trendTabBox-revpercar"><canvas id="chartTrendRevPerCar"></canvas></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none;"><canvas id="chartTrendDuration"></canvas></div>
 </div>
 
 <div class="toolbar">
@@ -793,7 +805,7 @@
       return DATA_MAP[yoyKey] || null;
     });
 
-    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
     const elCount = document.getElementById('chartTrendCount');
     if (elCount){
@@ -847,6 +859,42 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+        }
+      });
+    }
+
+    // 이용시간 구간별 주간 트렌드 — 원본 7개 구간을 3개 그룹으로 묶어 52주 추이를 전년동기와 비교
+    const DUR_GROUPS = [
+      { label: '6시간 이하', keys: ['3h미만','3~6h'], color: '#1f6f78' },
+      { label: '6~24시간', keys: ['6~12h','12~24h'], color: '#e2a53d' },
+      { label: '24시간 초과', keys: ['24~48h','48~72h','72h+'], color: '#b5495b' },
+    ];
+    function sumDur(row, keys){
+      if (!row || !row.이용시간구간별) return null;
+      return keys.reduce((a,k) => a + (row.이용시간구간별[k]||0), 0);
+    }
+    const elDuration = document.getElementById('chartTrendDuration');
+    if (elDuration){
+      const durDatasets = [];
+      DUR_GROUPS.forEach(g => {
+        durDatasets.push({
+          label: `${g.label} (전년동기)`, data: yoyRows.map(r => sumDur(r, g.keys)),
+          borderColor: g.color, backgroundColor: g.color, borderDash: [5,3],
+          fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
+        });
+        durDatasets.push({
+          label: `${g.label} (이번 해)`, data: rows.map(r => sumDur(r, g.keys)),
+          borderColor: g.color, backgroundColor: g.color,
+          fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
+        });
+      });
+      charts['chartTrendDuration'] = new Chart(elDuration.getContext('2d'), {
+        type: 'line',
+        data: { labels, datasets: durDatasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1131,6 +1179,21 @@
     }
     applyTrendFilter();
   });
+
+  // 주간 트렌드 탭 전환 (대당매출 / 이용시간 구간)
+  const trendTabBar = document.getElementById('trendTabBar');
+  if (trendTabBar){
+    trendTabBar.addEventListener('click', (e) => {
+      const btn = e.target.closest('.tab-btn');
+      if (!btn) return;
+      const tab = btn.dataset.tab;
+      trendTabBar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('trendTabBox-revpercar').style.display = (tab === 'revpercar') ? '' : 'none';
+      document.getElementById('trendTabBox-duration').style.display = (tab === 'duration') ? '' : 'none';
+      if (charts['chartTrendRevPerCar']) charts['chartTrendRevPerCar'].resize();
+      if (charts['chartTrendDuration']) charts['chartTrendDuration'].resize();
+    });
+  }
 
   applyTrendFilter();
   const saved = localStorage.getItem('wsr_last_week');
