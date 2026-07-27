@@ -160,7 +160,7 @@
 
   // CMS-퍼포먼스 데이터(구글시트 2026_CRM 탭) 기반 주간 CRM 퍼포먼스 지표 — 7일 합산
   const CRM_METRICS = [
-    {key:'방문자수', label:'방문자수', unit:'명', dec:0},
+    {key:'방문자수', label:'방문자수', unit:'명', dec:0, note:'DAU의 주단위 합계'},
     {key:'설치수', label:'설치수', unit:'건', dec:0},
     {key:'가입수', label:'가입수', unit:'건', dec:0},
     {key:'스팟조회수', label:'스팟조회수', unit:'회', dec:0},
@@ -992,7 +992,7 @@
       CRM_METRICS.forEach(m => {
         const v = row[m.key];
         kpiHtml += `<div class="kpi-card">
-          <div class="kpi-label">${m.label}</div>
+          <div class="kpi-label">${m.label}${m.note ? ` <span style="font-weight:500;color:#999;">(${m.note})</span>` : ''}</div>
           <div class="kpi-value">${fmtNum(v, m.dec)} <span style="font-size:12px;color:#999;font-weight:500;">${m.unit}</span></div>
           <div class="kpi-comp"><span>전주</span>${deltaSpan(v, prevWeek ? prevWeek.row[m.key] : null)}</div>
           <div class="kpi-comp"><span>전년동기</span>${deltaSpan(v, yoyWeek ? yoyWeek.row[m.key] : null)}</div>
