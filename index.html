@@ -88,6 +88,8 @@
   }
   .tab-btn:hover { background: #e2e4e7; }
   .tab-btn.active { background: #1a2b3c; color: #fff; }
+  .year-cb-label { margin-right: 14px; font-weight: 600; font-size: 13px; color: #333; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+  .year-cb-label input { cursor: pointer; }
   .foot { text-align: center; color: #999; font-size: 11.5px; margin-top: 24px; }
 </style>
 </head>
@@ -95,6 +97,11 @@
 
 <h1>📈 Weekly Sales Report 대시보드</h1>
 <div class="sub" id="subhead">데이터 로딩 중...</div>
+
+<div class="toolbar" id="yearToolbar">
+  <label>주간 트렌드 연도 선택</label>
+  <span id="yearCheckboxes"></span>
+</div>
 
 <div class="charts-row">
   <div class="section">
@@ -722,6 +729,34 @@
 
   const COLORS = ['#2266cc','#d0342c','#2a9d8f','#e9a23b','#8e5ea2','#5aa469','#c2536a','#4a7bc7','#c98a3c','#6a6aa8','#3fa7a0','#a85757','#7e9c3d','#b26aa5','#4d94c0','#c07f3f','#5b8fb9'];
 
+  // 연도 선택 — 데이터에 존재하는 연도를 동적으로 추출(하드코딩 금지). 데이터가 쌓일수록 자동으로 선택지가 늘어난다.
+  const AVAILABLE_YEARS = Array.from(new Set(ALL_WEEKS.map(w => parseDate(w).getFullYear()))).sort((a,b) => a-b);
+  const YEAR_COLORS = {};
+  AVAILABLE_YEARS.forEach((y, i) => { YEAR_COLORS[y] = COLORS[i % COLORS.length]; });
+  let selectedYears = AVAILABLE_YEARS.slice(-3); // 기본값: 최근 3개년(있는 만큼)
+
+  function renderYearCheckboxes(){
+    const wrap = document.getElementById('yearCheckboxes');
+    if (!wrap) return;
+    wrap.innerHTML = AVAILABLE_YEARS.map(y => `
+      <label class="year-cb-label">
+        <input type="checkbox" class="year-cb" value="${y}" ${selectedYears.includes(y) ? 'checked' : ''}>
+        <span style="color:${YEAR_COLORS[y]};">●</span> ${y}년
+      </label>`).join('');
+    wrap.querySelectorAll('.year-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const y = Number(cb.value);
+        if (cb.checked){
+          if (!selectedYears.includes(y)) selectedYears.push(y);
+        } else {
+          selectedYears = selectedYears.filter(v => v !== y);
+        }
+        selectedYears.sort((a,b) => a-b);
+        renderTrend();
+      });
+    });
+  }
+
   function topN(dict, n){
     const entries = Object.entries(dict).sort((a,b)=>b[1]-a[1]);
     return entries.slice(0,n);
@@ -795,8 +830,6 @@
   }
 
   function renderTrend(){
-    const latestYear = parseDate(MAX_WEEK).getFullYear();
-
     function allMondaysOfYear(year){
       let d = new Date(year, 0, 1);
       while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
@@ -807,35 +840,38 @@
       }
       return list;
     }
-    function shortRangeFromStart(wStart){
-      const s = parseDate(wStart);
-      const e = new Date(s); e.setDate(e.getDate() + 6);
-      const f = dd => `${String(dd.getMonth()+1).padStart(2,'0')}/${String(dd.getDate()).padStart(2,'0')}`;
-      return `${f(s)}~${f(e)}`;
-    }
 
-    // 기간 필터 없이 항상 해당 연도 1~52주 전체(1/1~12/31, 월요일 시작)를 보여준다.
-    const trendWeeksFull = allMondaysOfYear(latestYear);
-    const labels = trendWeeksFull.map(w => shortRangeFromStart(w));
-    const rows = trendWeeksFull.map(w => DATA_MAP[w] || null);
-    const yoyRows = trendWeeksFull.map(w => {
-      const yoyKey = addDays(w, -364); // 364일 = 52주 전, 항상 동일 요일(월요일 시작) 매칭
-      return DATA_MAP[yoyKey] || null;
-    });
+    const years = selectedYears.slice().sort((a,b) => a-b);
+    const maxWeeks = Math.max(1, ...AVAILABLE_YEARS.map(y => allMondaysOfYear(y).length));
+    const weekLabels = Array.from({length:maxWeeks}, (_,i) => `${i+1}주`);
+
+    function yearRows(year){
+      const weeksOfYear = allMondaysOfYear(year);
+      return weekLabels.map((_, idx) => {
+        const w = weeksOfYear[idx];
+        return w ? (DATA_MAP[w] || null) : null;
+      });
+    }
+    // 선 그래프의 선 스타일 — 가장 최근(선택된 것 중 마지막) 연도는 실선, 과거로 갈수록 점점 성긴 점선으로 구분.
+    function dashForIndex(i, total){
+      const patterns = [[8,4], [4,3], [2,2], [1,2]];
+      const posFromEnd = total - 1 - i;
+      return posFromEnd === 0 ? [] : (patterns[posFromEnd - 1] || [1,1]);
+    }
 
     ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendAvgDuration','chartTrendConvRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
+    const yearRowsMap = {};
+    years.forEach(y => { yearRowsMap[y] = yearRows(y); });
+
     const elCount = document.getElementById('chartTrendCount');
     if (elCount){
+      const datasets = years.map(y => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => r ? r.건수 : null), backgroundColor: YEAR_COLORS[y]
+      }));
       charts['chartTrendCount'] = new Chart(elCount.getContext('2d'), {
         type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label:'전년동기', data: yoyRows.map(r => r ? r.건수 : null), backgroundColor: COLORS[1] },
-            { label:'이번 해', data: rows.map(r => r ? r.건수 : null), backgroundColor: COLORS[0] },
-          ]
-        },
+        data: { labels: weekLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -846,15 +882,12 @@
 
     const elRev = document.getElementById('chartTrendRevenue');
     if (elRev){
+      const datasets = years.map(y => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => r ? r.총매출 : null), backgroundColor: YEAR_COLORS[y]
+      }));
       charts['chartTrendRevenue'] = new Chart(elRev.getContext('2d'), {
         type: 'bar',
-        data: {
-          labels,
-          datasets: [
-            { label:'전년동기', data: yoyRows.map(r => r ? r.총매출 : null), backgroundColor: COLORS[1] },
-            { label:'이번 해', data: rows.map(r => r ? r.총매출 : null), backgroundColor: COLORS[0] },
-          ]
-        },
+        data: { labels: weekLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -865,15 +898,15 @@
 
     const elRevPerCar = document.getElementById('chartTrendRevPerCar');
     if (elRevPerCar){
+      const datasets = years.map((y,i) => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => r ? r.차량당매출 : null),
+        borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+        borderDash: dashForIndex(i, years.length),
+        fill:false, tension:0.15, spanGaps:true, pointRadius:2
+      }));
       charts['chartTrendRevPerCar'] = new Chart(elRevPerCar.getContext('2d'), {
         type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label:'전년동기', data: yoyRows.map(r => r ? r.차량당매출 : null), borderColor: COLORS[1], backgroundColor: COLORS[1], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
-            { label:'이번 해', data: rows.map(r => r ? r.차량당매출 : null), borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
-          ]
-        },
+        data: { labels: weekLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -882,7 +915,7 @@
       });
     }
 
-    // 이용시간 구간별 주간 트렌드 — 4시간 이하 / 4시간~24시간 이하 / 24시간 초과 3개 구간.
+    // 이용시간 구간별 주간 트렌드 — 4시간 이하 / 4시간~24시간 이하 / 24시간 초과 3개 구간 × 선택 연도.
     const DUR_GROUPS = [
       { label: '4시간 이하', key: '4시간 이하', color: '#1f6f78' },
       { label: '4시간~24시간 이하', key: '4시간~24시간 이하', color: '#e2a53d' },
@@ -896,20 +929,18 @@
     if (elDuration){
       const durDatasets = [];
       DUR_GROUPS.forEach(g => {
-        durDatasets.push({
-          label: `${g.label} (전년동기)`, data: yoyRows.map(r => getDur(r, g.key)),
-          borderColor: g.color, backgroundColor: g.color, borderDash: [5,3],
-          fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
-        });
-        durDatasets.push({
-          label: `${g.label} (이번 해)`, data: rows.map(r => getDur(r, g.key)),
-          borderColor: g.color, backgroundColor: g.color,
-          fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
+        years.forEach((y,i) => {
+          durDatasets.push({
+            label: `${g.label} (${y}년)`, data: yearRowsMap[y].map(r => getDur(r, g.key)),
+            borderColor: g.color, backgroundColor: g.color,
+            borderDash: dashForIndex(i, years.length),
+            fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
+          });
         });
       });
       charts['chartTrendDuration'] = new Chart(elDuration.getContext('2d'), {
         type: 'line',
-        data: { labels, datasets: durDatasets },
+        data: { labels: weekLabels, datasets: durDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
@@ -921,15 +952,15 @@
     // 건당 평균이용시간 트렌드
     const elAvgDuration = document.getElementById('chartTrendAvgDuration');
     if (elAvgDuration){
+      const datasets = years.map((y,i) => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => r ? r.건당이용시간 : null),
+        borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+        borderDash: dashForIndex(i, years.length),
+        fill:false, tension:0.15, spanGaps:true, pointRadius:2
+      }));
       charts['chartTrendAvgDuration'] = new Chart(elAvgDuration.getContext('2d'), {
         type: 'line',
-        data: {
-          labels,
-          datasets: [
-            { label:'전년동기', data: yoyRows.map(r => r ? r.건당이용시간 : null), borderColor: COLORS[1], backgroundColor: COLORS[1], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
-            { label:'이번 해', data: rows.map(r => r ? r.건당이용시간 : null), borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
-          ]
-        },
+        data: { labels: weekLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -938,8 +969,7 @@
       });
     }
 
-    // 구매전환율 = 월단위 이용자수(회원ID 기반, 대여내역 원본에서 산출) / 월단위 방문자수(MAU, CMS-퍼포먼스 데이터).
-    // 주간 WAU가 존재하지 않아 신뢰도 있는 주간 전환율을 만들 수 없으므로, 이 지표만 월(1~12월) 단위로 별도 계산한다.
+    // 구매전환율 = 월단위 이용자수(회원ID 기반, 대여내역 원본에서 산출) / 월단위 방문자수(MAU, CMS-퍼포먼스 데이터) × 선택 연도.
     function getMonthlyConvRate(monthKey){
       const m = MONTHLY_CONV[monthKey];
       if (!m || m.이용자수 == null || !m.방문자수) return null;
@@ -948,17 +978,16 @@
     const elConvRate = document.getElementById('chartTrendConvRate');
     if (elConvRate){
       const monthLabels = Array.from({length:12}, (_,i) => `${i+1}월`);
-      const curYearData = monthLabels.map((_,i) => getMonthlyConvRate(`${latestYear}-${String(i+1).padStart(2,'0')}`));
-      const prevYearData = monthLabels.map((_,i) => getMonthlyConvRate(`${latestYear-1}-${String(i+1).padStart(2,'0')}`));
+      const datasets = years.map((y,i) => ({
+        label: `${y}년`,
+        data: monthLabels.map((_,mi) => getMonthlyConvRate(`${y}-${String(mi+1).padStart(2,'0')}`)),
+        borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+        borderDash: dashForIndex(i, years.length),
+        fill:false, tension:0.15, spanGaps:true, pointRadius:2.5
+      }));
       charts['chartTrendConvRate'] = new Chart(elConvRate.getContext('2d'), {
         type: 'line',
-        data: {
-          labels: monthLabels,
-          datasets: [
-            { label:'전년동기', data: prevYearData, borderColor: COLORS[1], backgroundColor: COLORS[1], borderDash:[5,3], fill:false, tension:0.15, spanGaps:true, pointRadius:2.5 },
-            { label:'이번 해', data: curYearData, borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2.5 },
-          ]
-        },
+        data: { labels: monthLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -1234,6 +1263,7 @@
     });
   }
 
+  renderYearCheckboxes();
   renderTrend();
   const saved = localStorage.getItem('wsr_last_week');
   const initial = (saved && DATA_MAP[saved]) ? saved : MAX_WEEK;
