@@ -112,9 +112,11 @@
   <div class="tab-bar" id="trendTabBar">
     <button class="tab-btn active" data-tab="revpercar">대당매출</button>
     <button class="tab-btn" data-tab="duration">이용시간 구간</button>
+    <button class="tab-btn" data-tab="avgduration">건당 평균이용시간</button>
   </div>
   <div class="chart-box" id="trendTabBox-revpercar"><canvas id="chartTrendRevPerCar"></canvas></div>
   <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><canvas id="chartTrendDuration"></canvas></div>
+  <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><canvas id="chartTrendAvgDuration"></canvas></div>
 </div>
 
 <div class="toolbar">
@@ -813,7 +815,7 @@
       return DATA_MAP[yoyKey] || null;
     });
 
-    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendAvgDuration'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
     const elCount = document.getElementById('chartTrendCount');
     if (elCount){
@@ -907,12 +909,32 @@
         }
       });
     }
+
+    // 건당 평균이용시간 트렌드
+    const elAvgDuration = document.getElementById('chartTrendAvgDuration');
+    if (elAvgDuration){
+      charts['chartTrendAvgDuration'] = new Chart(elAvgDuration.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label:'전년동기', data: yoyRows.map(r => r ? r.건당이용시간 : null), borderColor: COLORS[1], backgroundColor: COLORS[1], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
+            { label:'이번 해', data: rows.map(r => r ? r.건당이용시간 : null), borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+        }
+      });
+    }
   }
   function render(weekStart){
     const row = DATA_MAP[weekStart];
     const content = document.getElementById('content');
     const badges = document.getElementById('badges');
-    destroyCharts(['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration']);
+    destroyCharts(['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendAvgDuration']);
 
     document.getElementById('subhead').textContent =
       `데이터 보유 기간: ${MIN_WEEK} ~ ${MAX_WEEK} (총 ${ALL_WEEKS.length}주)  ·  주간 실적 기준 (월~일 7일 합산)`;
@@ -1163,8 +1185,10 @@
       trendTabBar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
       document.getElementById('trendTabBox-revpercar').style.display = (tab === 'revpercar') ? '' : 'none';
       document.getElementById('trendTabBox-duration').style.display = (tab === 'duration') ? '' : 'none';
+      document.getElementById('trendTabBox-avgduration').style.display = (tab === 'avgduration') ? '' : 'none';
       if (charts['chartTrendRevPerCar']) charts['chartTrendRevPerCar'].resize();
       if (charts['chartTrendDuration']) charts['chartTrendDuration'].resize();
+      if (charts['chartTrendAvgDuration']) charts['chartTrendAvgDuration'].resize();
     });
   }
 
