@@ -845,15 +845,20 @@
       });
     }
 
+    // 대당매출 트렌드 — 상단 기간 필터와 무관하게 항상 해당 연도 1~52주 전체(1/1~12/31)를 보여준다.
     const elRevPerCar = document.getElementById('chartTrendRevPerCar');
     if (elRevPerCar){
+      const rpcWeeks = allMondaysOfYear(latestYear);
+      const rpcLabels = rpcWeeks.map(w => shortRangeFromStart(w));
+      const rpcRows = rpcWeeks.map(w => DATA_MAP[w] || null);
+      const rpcYoyRows = rpcWeeks.map(w => { const yk = addDays(w, -364); return DATA_MAP[yk] || null; });
       charts['chartTrendRevPerCar'] = new Chart(elRevPerCar.getContext('2d'), {
         type: 'line',
         data: {
-          labels,
+          labels: rpcLabels,
           datasets: [
-            { label:'전년동기', data: yoyRows.map(r => r ? r.차량당매출 : null), borderColor: COLORS[1], backgroundColor: COLORS[1], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
-            { label:'이번 해', data: rows.map(r => r.차량당매출), borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
+            { label:'전년동기', data: rpcYoyRows.map(r => r ? r.차량당매출 : null), borderColor: COLORS[1], backgroundColor: COLORS[1], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
+            { label:'이번 해', data: rpcRows.map(r => r ? r.차량당매출 : null), borderColor: COLORS[0], backgroundColor: COLORS[0], fill:false, tension:0.15, spanGaps:true, pointRadius:2 },
           ]
         },
         options: {
