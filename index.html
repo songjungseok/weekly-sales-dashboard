@@ -1342,6 +1342,7 @@
     // 이용시간 구간 필터(다중선택)에 따라 표가 갱신될 수 있어 별도 함수(renderCouponTable)로 분리.
     couponTableRow = row;
     couponTablePrevWeek = prevWeek;
+    renderCouponDurCheckboxes();
     renderCouponTable();
 
     document.getElementById('footNote').textContent =
