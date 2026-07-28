@@ -125,15 +125,13 @@
   </div>
   <div class="chart-box" id="trendTabBox-revpercar"><canvas id="chartTrendRevPerCar"></canvas></div>
   <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><canvas id="chartTrendDuration"></canvas></div>
-  <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:440px; position:relative;">
-    <canvas id="chartTrendReuseRate"></canvas>
-    <div style="position:absolute; top:8px; right:8px; width:230px; font-size:11px; color:#555; line-height:1.6; background:rgba(255,255,255,0.94); border:1px solid #eee; border-radius:8px; padding:10px; z-index:5;">
-      <div style="font-weight:700; color:#333; margin-bottom:5px;">재이용률 정의</div>
-      전주 이용자수 ÷ 금주 이용자수 (시간 구간별)
-      <div style="margin-top:8px; color:#888;">
-        예) 금주 4시간미만 이용자 10명 中 전주 4시간미만 이용자 3명 = 30%<br>
-        (전주 4시간미만 이용자 3명, 미이용자 5명, 24시간 초과 이용자 2명)
+  <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
+    <div style="display:flex; flex-direction:column; height:100%;">
+      <div style="flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius:8px; padding:8px 12px; margin-bottom:8px;">
+        <b style="color:#333;">재이용률 정의:</b> 전주 이용자수 ÷ 금주 이용자수 (시간 구간별) &nbsp;|&nbsp;
+        예) 금주 4시간미만 이용자 10명 中 전주 4시간미만 이용자 3명 = 30% (전주 4시간미만 이용자 3명, 미이용자 5명, 24시간 초과 이용자 2명)
       </div>
+      <div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendReuseRate"></canvas></div>
     </div>
   </div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><canvas id="chartTrendAvgDuration"></canvas></div>
