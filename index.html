@@ -75,6 +75,7 @@
   .coupon-table thead th { color: #777; font-weight: 600; font-size: 11.5px; border-bottom: 2px solid #ddd; }
   .coupon-table tbody tr:hover { background: #fafafa; }
   .coupon-table tr.new-row { background: #fff9ec; }
+  .coupon-table tr.unused-row { background: #f2f4f6; font-weight: 600; }
   .coupon-table td.muted { color: #999; }
   .coupon-table .extra-note { display: block; font-size: 11px; color: #b08a2e; font-weight: 500; margin-top: 1px; }
   .new-badge {
@@ -1111,6 +1112,22 @@
     return {cnt, amt};
   }
 
+  function couponUnusedCnt(weekRow){
+    if (!weekRow) return 0;
+    const allSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
+    if (allSelected){
+      const couponTotal = Object.values(weekRow.쿠폰별||{}).reduce((a,v)=>a+v.건수, 0);
+      return Math.max(0, (weekRow.건수||0) - couponTotal);
+    }
+    let total = 0;
+    selectedCouponDurs.forEach(b => {
+      const bucketTotal = (weekRow.이용시간구간별||{})[b] || 0;
+      const couponBucketTotal = Object.values(weekRow.쿠폰이용시간구간별||{}).reduce((a,cm)=>a + ((cm[b]&&cm[b].건수)||0), 0);
+      total += Math.max(0, bucketTotal - couponBucketTotal);
+    });
+    return total;
+  }
+
   function renderCouponTable(){
     const row = couponTableRow, prevWeek = couponTablePrevWeek;
     const wrap = document.getElementById('couponTableWrap');
@@ -1126,13 +1143,22 @@
     const extraNew = entries.filter(e => e.isNew && !top10Rank.has(e.name));
     const couponList = top10.concat(extraNew).sort((a,b) => b.cnt - a.cnt);
 
-    if (entries.length === 0){
-      wrap.innerHTML = '<div class="empty" style="padding:16px;">선택한 이용시간 구간에 해당하는 쿠폰 사용 데이터가 없습니다.</div>';
-      return;
-    }
-
     const durMap = row.쿠폰이용시간별 || {};
-    const rowsHtml = couponList.map(e => {
+    const unusedCnt = couponUnusedCnt(row);
+    const unusedPrevCnt = prevWeek ? couponUnusedCnt(prevWeek.row) : 0;
+    const unusedRowHtml = `
+        <tr class="unused-row">
+          <td>—</td>
+          <td>쿠폰 미사용건</td>
+          <td>${unusedCnt.toLocaleString('ko-KR')}건</td>
+          <td class="muted">${prevWeek ? unusedPrevCnt.toLocaleString('ko-KR')+'건' : '—'}</td>
+          <td>${prevWeek ? deltaSpan(unusedCnt, unusedPrevCnt) : '—'}</td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+        </tr>`;
+    const noDataRowHtml = '<tr><td colspan="8" class="muted" style="text-align:center;padding:12px;">선택한 이용시간 구간에 해당하는 쿠폰 사용 데이터가 없습니다.</td></tr>';
+    const couponRowsHtml = couponList.length ? couponList.map(e => {
       const rank = top10Rank.has(e.name) ? top10Rank.get(e.name) : '—';
       const prevVal = couponFilteredCntAmt(prevWeek ? prevWeek.row : null, e.name);
       const prevCnt = prevVal.cnt;
@@ -1153,7 +1179,8 @@
           <td class="muted">${avgTxt}</td>
           <td class="muted">${medTxt}</td>
         </tr>`;
-    }).join('');
+    }).join('') : noDataRowHtml;
+    const rowsHtml = unusedRowHtml + couponRowsHtml;
 
     wrap.innerHTML = `
       <div class="coupon-table-wrap">
