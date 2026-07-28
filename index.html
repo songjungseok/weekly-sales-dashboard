@@ -118,14 +118,13 @@
   <h2>📊 주간 트렌드 — 상세 지표 (전년동기 vs 이번 해)</h2>
   <div class="tab-bar" id="trendTabBar">
     <button class="tab-btn active" data-tab="revpercar">대당매출</button>
-    <button class="tab-btn" data-tab="duration">이용시간 구간</button>
     <button class="tab-btn" data-tab="firstuse">첫이용자</button>
     <button class="tab-btn" data-tab="reuserate">재이용률</button>
-    <button class="tab-btn" data-tab="avgduration">건당 평균이용시간</button>
     <button class="tab-btn" data-tab="convrate">구매전환율</button>
+    <button class="tab-btn" data-tab="duration">이용시간 구간</button>
+    <button class="tab-btn" data-tab="avgduration">건당 평균이용시간</button>
   </div>
   <div class="chart-box" id="trendTabBox-revpercar"><canvas id="chartTrendRevPerCar"></canvas></div>
-  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><canvas id="chartTrendDuration"></canvas></div>
   <div class="chart-box" id="trendTabBox-firstuse" style="display:none;"><canvas id="chartTrendFirstUse"></canvas></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
@@ -136,8 +135,9 @@
       <div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendReuseRate"></canvas></div>
     </div>
   </div>
-  <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><canvas id="chartTrendAvgDuration"></canvas></div>
   <div class="chart-box" id="trendTabBox-convrate" style="display:none;"><canvas id="chartTrendConvRate"></canvas></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><canvas id="chartTrendDuration"></canvas></div>
+  <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><canvas id="chartTrendAvgDuration"></canvas></div>
 </div>
 
 <div class="toolbar">
