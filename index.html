@@ -1107,7 +1107,7 @@
     }
     const durMap = (weekRow.쿠폰이용시간구간별||{})[name] || {};
     let cnt = 0, amt = 0;
-    selectedCouponDurs.forEach(b => { const v = durMap[b]; if (v){ cnt += v.cnt; amt += v.amt; } });
+    selectedCouponDurs.forEach(b => { const v = durMap[b]; if (v){ cnt += (v.건수||0); amt += (v.할인금액||0); } });
     return {cnt, amt};
   }
 
