@@ -107,11 +107,11 @@
 <div class="charts-row">
   <div class="section">
     <h2>📊 주간 트렌드 — 건수 (전년동기 vs 이번 해)</h2>
-    <div class="chart-box"><canvas id="chartTrendCount"></canvas></div>
+    <div class="chart-box"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendCount"></canvas></div></div></div>
   </div>
   <div class="section">
     <h2>📊 주간 트렌드 — 총매출 (전년동기 vs 이번 해)</h2>
-    <div class="chart-box"><canvas id="chartTrendRevenue"></canvas></div>
+    <div class="chart-box"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevenue"></canvas></div></div></div>
   </div>
 </div>
 
@@ -126,21 +126,22 @@
     <button class="tab-btn" data-tab="distance">주행거리 구간</button>
     <button class="tab-btn" data-tab="avgduration">건당 평균이용시간</button>
   </div>
-  <div class="chart-box" id="trendTabBox-revpercar"><canvas id="chartTrendRevPerCar"></canvas></div>
-  <div class="chart-box" id="trendTabBox-firstuse" style="display:none;"><canvas id="chartTrendFirstUse"></canvas></div>
+  <div class="chart-box" id="trendTabBox-revpercar"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-firstuse" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
       <div style="flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius:8px; padding:8px 12px; margin-bottom:8px;">
         <b style="color:#333;">재이용률 정의:</b> 전주 이용자수 ÷ 금주 이용자수 (시간 구간별) &nbsp;|&nbsp;
         예) 금주 4시간미만 이용자 10명 中 전주 4시간미만 이용자 3명 = 30% (전주 4시간미만 이용자 3명, 미이용자 5명, 24시간 초과 이용자 2명)
+        <span style="color:#999;">(단위 : %)</span>
       </div>
       <div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendReuseRate"></canvas></div>
     </div>
   </div>
-  <div class="chart-box" id="trendTabBox-convrate" style="display:none;"><canvas id="chartTrendConvRate"></canvas></div>
-  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><canvas id="chartTrendDuration"></canvas></div>
-  <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><canvas id="chartTrendDistance"></canvas></div>
-  <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><canvas id="chartTrendAvgDuration"></canvas></div>
+  <div class="chart-box" id="trendTabBox-convrate" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : %</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
 </div>
 
 <div class="toolbar">
@@ -890,7 +891,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'건', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -906,7 +907,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'원', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -925,7 +926,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'원', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -959,7 +960,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'건', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -993,7 +994,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'건', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -1013,7 +1014,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'시간(h)', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -1033,7 +1034,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
-          scales: { y: { beginAtZero:true, title:{display:true, text:'명', font:{size:11}}, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -1061,7 +1062,7 @@
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
           scales: {
-            y: { beginAtZero:true, title:{display:true, text:'%', font:{size:11}}, ticks:{font:{size:10}, callback: v => v + '%'} },
+            y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:10}} }
           }
         }
@@ -1100,7 +1101,7 @@
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
           scales: {
-            y: { beginAtZero:true, title:{display:true, text:'%', font:{size:11}}, ticks:{font:{size:10}, callback: v => v + '%'} },
+            y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} }
           }
         }
