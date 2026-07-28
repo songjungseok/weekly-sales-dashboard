@@ -1112,12 +1112,24 @@
     return {cnt, amt};
   }
 
+  function couponUsedCnt(weekRow){
+    if (!weekRow) return 0;
+    const allSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
+    if (allSelected){
+      return Object.values(weekRow.쿠폰별||{}).reduce((a,v)=>a+v.건수, 0);
+    }
+    let total = 0;
+    selectedCouponDurs.forEach(b => {
+      total += Object.values(weekRow.쿠폰이용시간구간별||{}).reduce((a,cm)=>a + ((cm[b]&&cm[b].건수)||0), 0);
+    });
+    return total;
+  }
+
   function couponUnusedCnt(weekRow){
     if (!weekRow) return 0;
     const allSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
     if (allSelected){
-      const couponTotal = Object.values(weekRow.쿠폰별||{}).reduce((a,v)=>a+v.건수, 0);
-      return Math.max(0, (weekRow.건수||0) - couponTotal);
+      return Math.max(0, (weekRow.건수||0) - couponUsedCnt(weekRow));
     }
     let total = 0;
     selectedCouponDurs.forEach(b => {
@@ -1157,6 +1169,19 @@
           <td class="muted">—</td>
           <td class="muted">—</td>
         </tr>`;
+    const usedCnt = couponUsedCnt(row);
+    const usedPrevCnt = prevWeek ? couponUsedCnt(prevWeek.row) : 0;
+    const usedRowHtml = `
+        <tr class="unused-row">
+          <td>—</td>
+          <td>쿠폰 사용건 (전체 합계)</td>
+          <td>${usedCnt.toLocaleString('ko-KR')}건</td>
+          <td class="muted">${prevWeek ? usedPrevCnt.toLocaleString('ko-KR')+'건' : '—'}</td>
+          <td>${prevWeek ? deltaSpan(usedCnt, usedPrevCnt) : '—'}</td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+          <td class="muted">—</td>
+        </tr>`;
     const noDataRowHtml = '<tr><td colspan="8" class="muted" style="text-align:center;padding:12px;">선택한 이용시간 구간에 해당하는 쿠폰 사용 데이터가 없습니다.</td></tr>';
     const couponRowsHtml = couponList.length ? couponList.map(e => {
       const rank = top10Rank.has(e.name) ? top10Rank.get(e.name) : '—';
@@ -1180,7 +1205,7 @@
           <td class="muted">${medTxt}</td>
         </tr>`;
     }).join('') : noDataRowHtml;
-    const rowsHtml = unusedRowHtml + couponRowsHtml;
+    const rowsHtml = unusedRowHtml + usedRowHtml + couponRowsHtml;
 
     wrap.innerHTML = `
       <div class="coupon-table-wrap">
