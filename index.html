@@ -760,8 +760,9 @@
 
   // 연도 선택 — 데이터에 존재하는 연도를 동적으로 추출(하드코딩 금지). 데이터가 쌓일수록 자동으로 선택지가 늘어난다.
   const AVAILABLE_YEARS = Array.from(new Set(ALL_WEEKS.map(w => parseDate(w).getFullYear()))).sort((a,b) => a-b);
+  const YEAR_COLOR_OVERRIDES = { 2025: '#5C8AA6', 2026: '#1B2A4A' };
   const YEAR_COLORS = {};
-  AVAILABLE_YEARS.forEach((y, i) => { YEAR_COLORS[y] = COLORS[i % COLORS.length]; });
+  AVAILABLE_YEARS.forEach((y, i) => { YEAR_COLORS[y] = YEAR_COLOR_OVERRIDES[y] || COLORS[i % COLORS.length]; });
   let selectedYears = AVAILABLE_YEARS.slice(-3); // 기본값: 최근 3개년(있는 만큼)
 
   // 시간당매출 탭 내부 세부 지표 선택 (한 번에 하나만 보기 — 여러 줄을 겹쳐 그리면 가독성이 떨어져서 단일 선택으로 전환)
