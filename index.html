@@ -872,6 +872,22 @@
     const maxWeeks = Math.max(1, ...AVAILABLE_YEARS.map(y => allMondaysOfYear(y).length));
     const weekLabels = Array.from({length:maxWeeks}, (_,i) => `${i+1}주`);
 
+    // x축에 "N주" 아래 시작월을 함께 표시 — 해당 월이 시작되는 첫 주에만 "M월"을 붙이고, 그 외 주차는 생략.
+    // (연도별로 요일 배치가 미세하게 달라 대표 연도 하나 기준으로 월 경계를 판단 — 표시용 가이드 목적)
+    const monthRefYear = years[years.length-1] || AVAILABLE_YEARS[AVAILABLE_YEARS.length-1];
+    const refMondays = allMondaysOfYear(monthRefYear);
+    let lastRefMonth = null;
+    const displayLabels = weekLabels.map((wl, idx) => {
+      const dateStr = refMondays[idx];
+      if (!dateStr) return wl;
+      const mo = parseDate(dateStr).getMonth() + 1;
+      if (mo !== lastRefMonth){
+        lastRefMonth = mo;
+        return [wl, `${mo}월`];
+      }
+      return wl;
+    });
+
     function yearRows(year){
       const weeksOfYear = allMondaysOfYear(year);
       return weekLabels.map((_, idx) => {
@@ -898,7 +914,7 @@
       }));
       charts['chartTrendCount'] = new Chart(elCount.getContext('2d'), {
         type: 'bar',
-        data: { labels: weekLabels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -914,7 +930,7 @@
       }));
       charts['chartTrendRevenue'] = new Chart(elRev.getContext('2d'), {
         type: 'bar',
-        data: { labels: weekLabels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -933,7 +949,7 @@
       }));
       charts['chartTrendRevPerCar'] = new Chart(elRevPerCar.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -967,7 +983,7 @@
       });
       charts['chartTrendDuration'] = new Chart(elDuration.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets: durDatasets },
+        data: { labels: displayLabels, datasets: durDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
@@ -1001,7 +1017,7 @@
       });
       charts['chartTrendDistance'] = new Chart(elDistance.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets: distDatasets },
+        data: { labels: displayLabels, datasets: distDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
@@ -1021,7 +1037,7 @@
       }));
       charts['chartTrendAvgDuration'] = new Chart(elAvgDuration.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -1041,7 +1057,7 @@
       }));
       charts['chartTrendFirstUse'] = new Chart(elFirstUse.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets },
+        data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
@@ -1107,7 +1123,7 @@
       });
       charts['chartTrendReuseRate'] = new Chart(elReuseRate.getContext('2d'), {
         type: 'line',
-        data: { labels: weekLabels, datasets: reuseDatasets },
+        data: { labels: displayLabels, datasets: reuseDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
