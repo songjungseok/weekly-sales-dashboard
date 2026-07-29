@@ -929,7 +929,7 @@
       return posFromEnd === 0 ? [] : (patterns[posFromEnd - 1] || [1,1]);
     }
 
-    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendAvgDuration','chartTrendConvRate','chartTrendReuseRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
     const yearRowsMap = {};
     years.forEach(y => { yearRowsMap[y] = yearRows(y); });
