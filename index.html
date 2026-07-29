@@ -135,7 +135,7 @@
     <button class="tab-btn" data-tab="revperhour">시간당매출</button>
   </div>
   </div>
-  <div class="chart-box" id="trendTabBox-revpercar"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:6px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-firstuse" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
@@ -765,6 +765,29 @@
   AVAILABLE_YEARS.forEach((y, i) => { YEAR_COLORS[y] = YEAR_COLOR_OVERRIDES[y] || COLORS[i % COLORS.length]; });
   let selectedYears = AVAILABLE_YEARS.slice(-3); // 기본값: 최근 3개년(있는 만큼)
 
+  // 대당매출 탭 내부 주중/주말 선택 (한 번에 하나만 보기 — 두 그룹 x 연도 라인을 한꺼번에 그리면 겹쳐 보여서 단일 선택으로 전환)
+  const REV_PER_CAR_GROUPS = {
+    total:   { label: '전체' },
+    weekday: { label: '주중', key: '주중' },
+    weekend: { label: '주말', key: '주말' },
+  };
+  let selectedRevPerCarGroup = 'total';
+
+  function renderRevPerCarGroupBar(){
+    const wrap = document.getElementById('revPerCarGroupBar');
+    if (!wrap) return;
+    wrap.innerHTML = Object.keys(REV_PER_CAR_GROUPS).map(key => `
+      <button type="button" class="tab-btn rpc-btn${key===selectedRevPerCarGroup ? ' active' : ''}" data-group="${key}" style="font-size:11.5px; padding:5px 12px;">${REV_PER_CAR_GROUPS[key].label}</button>
+    `).join('');
+    wrap.querySelectorAll('.rpc-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedRevPerCarGroup = btn.dataset.group;
+        renderRevPerCarGroupBar();
+        renderTrend();
+      });
+    });
+  }
+
   // 시간당매출 탭 내부 세부 지표 선택 (한 번에 하나만 보기 — 여러 줄을 겹쳐 그리면 가독성이 떨어져서 단일 선택으로 전환)
   const REV_PER_HOUR_METRICS = {
     total: { label: '전체(시간당매출)', field: '총매출' },
@@ -977,17 +1000,23 @@
     }
     const elRevPerCar = document.getElementById('chartTrendRevPerCar');
     if (elRevPerCar){
-      const datasets = [];
-      WD_GROUPS.forEach(g => {
-        years.forEach((y,i) => {
-          datasets.push({
-            label: `${g.label} (${y}년)`, data: yearRowsMap[y].map(r => getWdRevPerCar(r, g.key)),
-            borderColor: g.color, backgroundColor: g.color,
-            borderDash: dashForIndex(i, years.length),
-            fill:false, tension:0.15, spanGaps:true, pointRadius:1.5
-          });
-        });
-      });
+      let datasets;
+      if (selectedRevPerCarGroup === 'total'){
+        datasets = years.map((y,i) => ({
+          label: `${y}년`, data: yearRowsMap[y].map(r => r ? r.차량당매출 : null),
+          borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+          borderDash: dashForIndex(i, years.length),
+          fill:false, tension:0.15, spanGaps:true, pointRadius:2
+        }));
+      } else {
+        const g = REV_PER_CAR_GROUPS[selectedRevPerCarGroup];
+        datasets = years.map((y,i) => ({
+          label: `${g.label} (${y}년)`, data: yearRowsMap[y].map(r => getWdRevPerCar(r, g.key)),
+          borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+          borderDash: dashForIndex(i, years.length),
+          fill:false, tension:0.15, spanGaps:true, pointRadius:2
+        }));
+      }
       charts['chartTrendRevPerCar'] = new Chart(elRevPerCar.getContext('2d'), {
         type: 'line',
         data: { labels: displayLabels, datasets },
@@ -1639,6 +1668,7 @@
   }
 
   renderYearCheckboxes();
+  renderRevPerCarGroupBar();
   renderRevPerHourMetricBar();
   renderCouponDurCheckboxes();
   renderTrend();
