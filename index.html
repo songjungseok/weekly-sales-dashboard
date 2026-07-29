@@ -1371,11 +1371,6 @@
     const insightItems = generateInsights(row, prevWeek, yoyWeek);
     const insightsHtml = insightItems.map(s => `<li>${s}</li>`).join('');
 
-    const couponInsightItems = generateCouponInsights(row, prevWeek, yoyWeek)
-      .concat(generateCouponTimeInsights(row, prevWeek))
-      .concat(generateCouponTypeInsights(row, prevWeek));
-    const couponInsightsHtml = couponInsightItems.map(s => `<li>${s}</li>`).join('');
-
     const html = `
       ${kpiHtml}
       <div class="section">
@@ -1415,7 +1410,6 @@
           </div>
         </div>
         <div id="couponTableWrap"></div>
-        <ul class="insight-list" style="margin-top:10px;">${couponInsightsHtml}</ul>
       </div>
       <div class="section">
         <h2>🔎 비교 기준 안내</h2>
