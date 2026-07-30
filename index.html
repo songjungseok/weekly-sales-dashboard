@@ -766,24 +766,25 @@
   let selectedYears = AVAILABLE_YEARS.slice(-3); // 기본값: 최근 3개년(있는 만큼)
 
   // 첫이용자 탭 내부 이용시간구간 선택 (한 번에 하나만 보기 — 대당매출의 주중/주말 선택과 동일한 패턴)
-  const FIRSTUSE_BUCKET_GROUPS = {
-    total: { label: '전체' },
-    b1: { label: '4시간이하', key: '4시간 이하' },
-    b2: { label: '4-24시간이하', key: '4시간~24시간 이하' },
-    b3: { label: '24시간초과', key: '24시간 초과' },
-  };
-  let selectedFirstUseBucket = 'total';
+  const FIRSTUSE_BUCKETS = ['4시간 이하','4시간~24시간 이하','24시간 초과'];
+  const FIRSTUSE_BUCKET_LABELS = {'4시간 이하':'4시간이하', '4시간~24시간 이하':'4-24시간이하', '24시간 초과':'24시간초과'};
+  let selectedFirstUseBuckets = FIRSTUSE_BUCKETS.slice(); // 기본값: 3구간 전체 선택(= 전체 첫이용자수와 동일)
 
   function renderFirstUseBucketBar(){
     const wrap = document.getElementById('firstUseBucketBar');
     if (!wrap) return;
-    wrap.innerHTML = Object.keys(FIRSTUSE_BUCKET_GROUPS).map(key => `
-      <button type="button" class="tab-btn fub-btn${key===selectedFirstUseBucket ? ' active' : ''}" data-bucket="${key}" style="font-size:11.5px; padding:5px 12px;">${FIRSTUSE_BUCKET_GROUPS[key].label}</button>
-    `).join('');
-    wrap.querySelectorAll('.fub-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedFirstUseBucket = btn.dataset.bucket;
-        renderFirstUseBucketBar();
+    wrap.innerHTML = FIRSTUSE_BUCKETS.map(b => `
+      <label class="year-cb-label">
+        <input type="checkbox" class="fub-cb" value="${b}" ${selectedFirstUseBuckets.includes(b) ? 'checked' : ''}>
+        ${FIRSTUSE_BUCKET_LABELS[b]}
+      </label>`).join('');
+    wrap.querySelectorAll('.fub-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        if (cb.checked){
+          if (!selectedFirstUseBuckets.includes(cb.value)) selectedFirstUseBuckets.push(cb.value);
+        } else {
+          selectedFirstUseBuckets = selectedFirstUseBuckets.filter(v => v !== cb.value);
+        }
         renderTrend();
       });
     });
@@ -1168,9 +1169,13 @@
         // 첫이용자수 트렌드 (해당 주에 처음 이용한 신규 고객 수, 2016년~현재 전체 이력 기준 첫 예약시작일로 산출)
     function getFirstUseVal(row){
       if (!row) return null;
-      if (selectedFirstUseBucket === 'total') return row.첫이용자수 != null ? row.첫이용자수 : null;
-      const key = FIRSTUSE_BUCKET_GROUPS[selectedFirstUseBucket].key;
-      return (row.첫이용자구간별 && row.첫이용자구간별[key] != null) ? row.첫이용자구간별[key] : null;
+      if (selectedFirstUseBuckets.length === FIRSTUSE_BUCKETS.length) return row.첫이용자수 != null ? row.첫이용자수 : null;
+      if (selectedFirstUseBuckets.length === 0) return null;
+      let sum = 0, any = false;
+      selectedFirstUseBuckets.forEach(b => {
+        if (row.첫이용자구간별 && row.첫이용자구간별[b] != null){ sum += row.첫이용자구간별[b]; any = true; }
+      });
+      return any ? sum : null;
     }
     const elFirstUse = document.getElementById('chartTrendFirstUse');
     if (elFirstUse){
