@@ -522,211 +522,182 @@
 
   function generateInsights(row, prevWeek, yoyWeek){
     const items = [];
-    const compares = [];
-    if (yoyWeek) compares.push({label:'전년동기', row: yoyWeek.row});
-    if (prevWeek) compares.push({label:'전주', row: prevWeek.row});
-    if (compares.length === 0){
+    if (!prevWeek && !yoyWeek){
       items.push('비교 가능한 과거 데이터가 없어 인사이트를 생성할 수 없습니다.');
       if (row.보정적용) items.push('⚠️ 최근 일자 데이터는 미반납 차량 보정 예측치가 포함되어 있어 추후 소폭 조정될 수 있습니다.');
       return items;
     }
-    const primary = compares[0];
-    const c = primary.row;
-    const tT = row.차량유형별 || {}, tC = c.차량유형별 || {};
 
-    // ① 전체 건수 변화의 공급/가동률 분해
-    {
-      const d = decomposeCount(row.건수, c.건수, row.차량수, c.차량수);
-      if (d){
-        const p = pct(row.건수, c.건수);
-        const ratePct = pct(d.rateT, d.rateC);
-        let cause;
-        if (d.dominant === 'efficiency'){
-          cause = `공급 효과는 ${fmtSigned(d.supply,'건')}에 불과하나 가동률(차량당건수) 변화 효과가 ${fmtSigned(d.effic,'건')}으로 커, ${d.effic<0?'단순 공급 조정이 아닌 순수 수요 위축':'공급 조정 없이도 순수 수요가 증가'}으로 해석됨`;
-        } else if (d.dominant === 'supply'){
-          cause = `차량수 변화(${fmtSigned(d.vehChange,'대')}) 효과가 ${fmtSigned(d.supply,'건')}로 지배적이며, 가동률은 ${d.rateT.toFixed(2)}건/대로 ${Math.abs(ratePct)<5?'비교적 안정적':`${fmtPct(ratePct)} 변화`}`;
-        } else {
-          cause = `공급 효과(${fmtSigned(d.supply,'건')})와 가동률 효과(${fmtSigned(d.effic,'건')})가 비슷한 비중으로 함께 작용`;
-        }
-        items.push(`<b>① ${p>=0?'실적 개선':'실적 하락'}의 주 원인</b> — 건수 ${fmtPct(p)} (${primary.label} 대비) 중 ${cause}.`);
+    // 값(getter) 하나를 전주/전년동기와 비교해 "전주 대비 +x%, 전년동기 대비 +y%" 형태의 문구를 만든다.
+    function cmpText(getter){
+      const t = getter(row);
+      if (t == null || isNaN(t)) return null;
+      const parts = [];
+      if (prevWeek){
+        const c = getter(prevWeek.row);
+        const p = pct(t, c);
+        if (p !== null) parts.push(`전주 대비 ${fmtPct(p)}`);
       }
+      if (yoyWeek){
+        const c = getter(yoyWeek.row);
+        const p = pct(t, c);
+        if (p !== null) parts.push(`전년동기 대비 ${fmtPct(p)}`);
+      }
+      return parts.length ? parts.join(', ') : null;
     }
 
-    // ② 최대 비중 차종의 효율 변화
-    {
-      const totalCnt = Object.values(tT).reduce((a,v)=>a+(v.건수||0),0) || 1;
-      let domType = null, domShare = 0;
-      Object.entries(tT).forEach(([k,v]) => { const share = (v.건수||0)/totalCnt; if (share > domShare){ domShare = share; domType = k; } });
-      if (domType && tC[domType] && tT[domType].차량수 && tC[domType].차량수){
-        const vt = tT[domType], vc = tC[domType];
-        const d = decomposeCount(vt.건수, vc.건수, vt.차량수, vc.차량수);
-        if (d){
-          const vehPct = pct(vt.차량수, vc.차량수);
-          const dir = d.rateT >= d.rateC ? '개선' : '하락';
-          items.push(`<b>② 최대 차종(${domType}) 효율 ${dir}</b> — 전체의 ${(domShare*100).toFixed(1)}% 차지. 차량수는 ${fmtPct(vehPct)}이지만 차량당건수는 ${d.rateC.toFixed(2)}→${d.rateT.toFixed(2)}건/대로 ${dir}, 대표 차종 수요 ${dir==='하락'?'약화':'견조'} 뚜렷.`);
-        }
-      }
-    }
-
-    // ③ 공급이 수요를 앞지르는 차종 (차량수 급증 + 가동률 하락)
-    {
+    // 구간형 지표(이용시간구간/주행거리구간/첫이용자구간 등)에서 각 구간의 "비중(%)" 변화 중
+    // 가장 크게 움직인 구간을 찾아 %p 변화로 설명. 1%p 미만 변화는 노이즈로 간주해 무시.
+    function biggestBucketShift(bucketKeys, getMap, labelMap){
+      const tMap = getMap(row) || {};
+      const tTotal = Object.values(tMap).reduce((a,v)=>a+(v||0),0) || 0;
+      if (!tTotal) return null;
       let best = null;
-      Object.entries(tT).forEach(([k, vt]) => {
-        const vc = tC[k];
-        if (!vc || !vt.차량수 || !vc.차량수) return;
-        if ((vt.건수||0) < 15 && (vc.건수||0) < 15) return;
-        const vehPct = pct(vt.차량수, vc.차량수);
-        const cntPct = pct(vt.건수, vc.건수);
-        if (vehPct===null || cntPct===null) return;
-        if (vehPct >= 15 && (cntPct - vehPct) <= -10){
-          const gap = cntPct - vehPct;
-          if (!best || gap < best.gap) best = {type:k, vehPct, cntPct, vt, vc};
+      [{cw:prevWeek,label:'전주'},{cw:yoyWeek,label:'전년동기'}].forEach(({cw,label}) => {
+        if (!cw) return;
+        const cMap = getMap(cw.row) || {};
+        const cTotal = Object.values(cMap).reduce((a,v)=>a+(v||0),0) || 0;
+        if (!cTotal) return;
+        bucketKeys.forEach(k => {
+          const tShare = (tMap[k]||0) / tTotal * 100;
+          const cShare = (cMap[k]||0) / cTotal * 100;
+          const diff = tShare - cShare;
+          if (Math.abs(diff) < 1) return;
+          const score = Math.abs(diff);
+          if (!best || score > best.score){
+            best = {key:k, label: labelMap ? (labelMap[k]||k) : k, tShare, cShare, diff, compLabel: label, score};
+          }
+        });
+      });
+      return best;
+    }
+
+    // ① 대당매출 (주간 트렌드 — 상세지표 '대당매출' 탭 기준: 전체 차량당매출 + 주중/주말 구분)
+    {
+      const t = row.차량당매출;
+      const cmp = cmpText(r => r.차량당매출);
+      if (t != null && cmp){
+        let wdText = '';
+        const wdComp = prevWeek || yoyWeek;
+        if (wdComp && row.요일구분별 && wdComp.row.요일구분별){
+          const wdT = (row.요일구분별.주중 && row.차량수) ? row.요일구분별.주중.총매출/row.차량수 : null;
+          const weT = (row.요일구분별.주말 && row.차량수) ? row.요일구분별.주말.총매출/row.차량수 : null;
+          const wdC = (wdComp.row.요일구분별.주중 && wdComp.row.차량수) ? wdComp.row.요일구분별.주중.총매출/wdComp.row.차량수 : null;
+          const weC = (wdComp.row.요일구분별.주말 && wdComp.row.차량수) ? wdComp.row.요일구분별.주말.총매출/wdComp.row.차량수 : null;
+          const wdP = pct(wdT, wdC), weP = pct(weT, weC);
+          if (wdP !== null && weP !== null){
+            const bigger = Math.abs(wdP) >= Math.abs(weP) ? '주중' : '주말';
+            wdText = ` (주중 ${fmtNum(wdT,0)}원 ${fmtPct(wdP)}, 주말 ${fmtNum(weT,0)}원 ${fmtPct(weP)} — ${bigger} 변동폭이 더 큼)`;
+          }
         }
+        items.push(`<b>① 대당매출</b> — ${fmtNum(t,0)}원 (${cmp}).${wdText}`);
+      }
+    }
+
+    // ② 첫이용자 (상세지표 '첫이용자' 탭 기준: 전체 첫이용자수 + 이용시간구간 구성비 변화)
+    {
+      const t = row.첫이용자수;
+      const cmp = cmpText(r => r.첫이용자수);
+      if (t != null && cmp){
+        const bucketShift = biggestBucketShift(FIRSTUSE_BUCKETS, r => r.첫이용자구간별, FIRSTUSE_BUCKET_LABELS);
+        let bucketText = '';
+        if (bucketShift){
+          bucketText = ` 이용시간구간별로는 ${bucketShift.label} 비중이 ${bucketShift.compLabel} 대비 ${bucketShift.cShare.toFixed(1)}%→${bucketShift.tShare.toFixed(1)}%(${bucketShift.diff>=0?'+':''}${bucketShift.diff.toFixed(1)}%p)로 ${bucketShift.diff>=0?'확대':'축소'}됨.`;
+        }
+        items.push(`<b>② 첫이용자</b> — ${fmtNum(t,0)}명 (${cmp}).${bucketText}`);
+      }
+    }
+
+    // ③ 재이용률 (상세지표 '재이용률' 탭 기준: 이용시간구간별 재이용률 중 가장 크게 움직인 구간)
+    {
+      const REUSE_KEYS = ['4시간 이하','4~24시간 이하','24시간 초과'];
+      let best = null;
+      [{cw:prevWeek,label:'전주'},{cw:yoyWeek,label:'전년동기'}].forEach(({cw,label}) => {
+        if (!cw) return;
+        REUSE_KEYS.forEach(k => {
+          const tV = (row.재이용률구간별 && row.재이용률구간별[k]) ? row.재이용률구간별[k].재이용률 : null;
+          const cV = (cw.row.재이용률구간별 && cw.row.재이용률구간별[k]) ? cw.row.재이용률구간별[k].재이용률 : null;
+          if (tV == null || cV == null) return;
+          const diff = tV - cV;
+          if (Math.abs(diff) < 0.5) return;
+          const score = Math.abs(diff);
+          if (!best || score > best.score) best = {key:k, tV, cV, diff, compLabel:label, score};
+        });
       });
       if (best){
-        const rateT = best.vt.건수/best.vt.차량수, rateC = best.vc.건수/best.vc.차량수;
-        items.push(`<b>③ ${best.type}, 공급이 수요를 앞지름</b> — 차량수 ${fmtPct(best.vehPct)}(${best.vc.차량수}→${best.vt.차량수}대) 확대에도 건수는 ${fmtPct(best.cntPct)}에 그쳐 가동률 ${rateC.toFixed(2)}→${rateT.toFixed(2)}건/대로 하락.`);
+        items.push(`<b>③ 재이용률</b> — ${best.key} 구간 재이용률이 ${best.compLabel} 대비 ${best.cV.toFixed(1)}%→${best.tV.toFixed(1)}%(${best.diff>=0?'+':''}${best.diff.toFixed(1)}%p)로 가장 크게 ${best.diff>=0?'상승':'하락'}.`);
       }
     }
 
-    // ④ 차종 포트폴리오 축소 (공급·수요 동반 급감)
+    // ④ 구매전환율 (상세지표 '구매전환율' 탭 기준: 월 단위 이용자수/방문자수 — 전월·전년동월과 비교)
     {
-      const shrink = [];
-      Object.entries(tT).forEach(([k, vt]) => {
-        const vc = tC[k];
-        if (!vc) return;
-        const vehPct = pct(vt.차량수, vc.차량수), cntPct = pct(vt.건수, vc.건수);
-        if (vehPct!==null && cntPct!==null && vehPct<=-20 && cntPct<=-20 && ((vt.건수||0)>=5 || (vc.건수||0)>=5)){
-          shrink.push({type:k, vehPct, cntPct});
+      function shiftMonth(monthKey, delta){
+        let [y,m] = monthKey.split('-').map(Number);
+        m += delta;
+        while (m<1){ m+=12; y-=1; }
+        while (m>12){ m-=12; y+=1; }
+        return `${y}-${String(m).padStart(2,'0')}`;
+      }
+      function convRateOf(monthKey){
+        const m = MONTHLY_CONV[monthKey];
+        if (!m || m.이용자수 == null || !m.방문자수) return null;
+        return (m.이용자수 / m.방문자수) * 100;
+      }
+      const curMonthKey = row.주시작일.slice(0,7);
+      const curRate = convRateOf(curMonthKey);
+      if (curRate != null){
+        const prevMonthRate = convRateOf(shiftMonth(curMonthKey, -1));
+        const yoyMonthRate = convRateOf(shiftMonth(curMonthKey, -12));
+        const parts = [];
+        if (prevMonthRate != null) parts.push(`전월 ${prevMonthRate.toFixed(1)}% 대비 ${(curRate-prevMonthRate)>=0?'+':''}${(curRate-prevMonthRate).toFixed(1)}%p`);
+        if (yoyMonthRate != null) parts.push(`전년동월 ${yoyMonthRate.toFixed(1)}% 대비 ${(curRate-yoyMonthRate)>=0?'+':''}${(curRate-yoyMonthRate).toFixed(1)}%p`);
+        if (parts.length){
+          items.push(`<b>④ 구매전환율</b> — ${Number(curMonthKey.slice(5,7))}월 ${curRate.toFixed(1)}% (${parts.join(', ')}).`);
         }
-      });
-      shrink.sort((a,b) => a.cntPct - b.cntPct);
-      if (shrink.length >= 2){
-        const top = shrink.slice(0,3).map(s => `${s.type}(${fmtPct(s.cntPct)})`).join(', ');
-        items.push(`<b>④ 차종 포트폴리오 축소</b> — ${top} 모두 공급·수요 동반 급감.`);
       }
     }
 
-    // ⑤ 이용 피크 시간대 이동
+    // ⑤ 이용시간 구간 (상세지표 '이용시간 구간' 탭 기준: 3개 구간 구성비 중 가장 크게 움직인 구간)
     {
-      const peakT = row.시간대별.indexOf(Math.max(...row.시간대별));
-      const peakC = c.시간대별 ? c.시간대별.indexOf(Math.max(...c.시간대별)) : null;
-      if (peakC!==null && Math.abs(peakC-peakT) >= 2){
-        items.push(`<b>⑤ 이용 피크 시간대 이동</b> — ${primary.label} ${peakC}시 피크에서 이번 주 ${peakT}시 피크로 이동, 수요 패턴 변화.`);
+      const DUR_KEYS = ['4시간 이하','4시간~24시간 이하','24시간 초과'];
+      const shift = biggestBucketShift(DUR_KEYS, r => r.이용시간구간별, null);
+      if (shift){
+        items.push(`<b>⑤ 이용시간 구간</b> — ${shift.key} 비중이 ${shift.compLabel} 대비 ${shift.cShare.toFixed(1)}%→${shift.tShare.toFixed(1)}%(${shift.diff>=0?'+':''}${shift.diff.toFixed(1)}%p)로 가장 크게 변동.`);
       }
     }
 
-    // ⑥ 특이 지표 자동 감지 — 매번 같은 항목이 아니라, 이번 주에 유독 튀는 지표를 찾아서 알려줌
-    // 건수/매출 총량이 아닌 '단가·비중·구성비' 계열 파생 지표들을 전주·전년동기와 비교해
-    // 임계치를 넘는 변화가 있으면 점수화(임계치 대비 초과 배수)해서 가장 두드러진 것만 노출한다.
+    // ⑥ 주행거리 구간 (상세지표 '주행거리 구간' 탭 기준: 3개 구간 구성비 중 가장 크게 움직인 구간)
     {
-      const anomalies = [];
-      const compsForAnomaly = [];
-      if (prevWeek) compsForAnomaly.push({label:'전주', row: prevWeek.row});
-      if (yoyWeek) compsForAnomaly.push({label:'전년동기', row: yoyWeek.row});
-
-      function tryMetric(name, getter, kind, threshold, fmt){
-        let best = null;
-        compsForAnomaly.forEach(cw => {
-          const vT = getter(row), vC = getter(cw.row);
-          if (vT==null || vC==null || isNaN(vT) || isNaN(vC)) return;
-          let diff, ok;
-          if (kind === 'pct'){
-            diff = pct(vT, vC);
-            ok = diff !== null && Math.abs(diff) >= threshold;
-          } else { // 'pp' — vT/vC는 0~1 비율, %p 차이로 비교
-            diff = (vT - vC) * 100;
-            ok = Math.abs(diff) >= threshold;
-          }
-          if (ok){
-            const score = Math.abs(diff) / threshold;
-            if (!best || score > best.score) best = {name, vT, vC, diff, kind, fmt, compLabel: cw.label, score};
-          }
-        });
-        if (best) anomalies.push(best);
-      }
-
-      const safeDiv = (a,b) => (b ? a/b : null);
-
-      // 매출 구성비 (대여/보험/주행 비중)
-      tryMetric('대여매출 비중', r => safeDiv(r.대여매출, r.총매출), 'pp', 4);
-      tryMetric('보험매출 비중', r => safeDiv(r.보험매출, r.총매출), 'pp', 3);
-      tryMetric('주행매출 비중', r => safeDiv(r.주행매출, r.총매출), 'pp', 3);
-      // 건당/시간당 단가
-      tryMetric('건당 대여매출', r => safeDiv(r.대여매출, r.건수), 'pct', 12);
-      tryMetric('건당 보험매출', r => safeDiv(r.보험매출, r.건수), 'pct', 12);
-      tryMetric('건당 주행매출', r => safeDiv(r.주행매출, r.건수), 'pct', 12);
-      tryMetric('시간당 대여매출', r => safeDiv(r.대여매출, r.총이용시간), 'pct', 10);
-      // 정가(예약요금관리자) 대비 할인율 — 데이터가 있는 주에서만 계산됨
-      tryMetric('정가 대비 할인율', r => (r.예약요금관리자합계 ? (1 - safeDiv(r.대여매출, r.예약요금관리자합계)) : null), 'pp', 1);
-
-      // 지역별 최대 변동 (표본이 너무 적은 지역은 노이즈이므로 제외)
-      {
-        let bestRegion = null;
-        compsForAnomaly.forEach(cw => {
-          Object.keys(row.지역별||{}).forEach(reg => {
-            const vT = row.지역별[reg], vC = (cw.row.지역별||{})[reg];
-            if (!vC || vC < 30) return;
-            const p = pct(vT, vC);
-            if (p===null || Math.abs(p) < 30) return;
-            const score = Math.abs(p)/30;
-            if (!bestRegion || score > bestRegion.score) bestRegion = {name:'지역별 건수', region:reg, vT, vC, diff:p, kind:'pct', compLabel:cw.label, score};
-          });
-        });
-        if (bestRegion) anomalies.push(bestRegion);
-      }
-
-      // 이용시간구간별 비중 최대 변동
-      {
-        let bestDur = null;
-        compsForAnomaly.forEach(cw => {
-          const tTotal = Object.values(row.이용시간구간별||{}).reduce((a,v)=>a+v,0) || 1;
-          const cTotal = Object.values(cw.row.이용시간구간별||{}).reduce((a,v)=>a+v,0) || 1;
-          Object.keys(row.이용시간구간별||{}).forEach(b => {
-            const vT = (row.이용시간구간별[b]||0)/tTotal;
-            const vC = ((cw.row.이용시간구간별||{})[b]||0)/cTotal;
-            const diff = (vT-vC)*100;
-            if (Math.abs(diff) < 3) return;
-            const score = Math.abs(diff)/3;
-            if (!bestDur || score > bestDur.score) bestDur = {name:'이용시간구간 비중', region:b, vT, vC, diff, kind:'pp', compLabel:cw.label, score};
-          });
-        });
-        if (bestDur) anomalies.push(bestDur);
-      }
-
-      anomalies.sort((a,b) => b.score - a.score);
-      const top = anomalies.slice(0, 4);
-
-      if (top.length){
-        const revPct = prevWeek ? pct(row.총매출, prevWeek.row.총매출) : (yoyWeek ? pct(row.총매출, yoyWeek.row.총매출) : null);
-        const rentPct = prevWeek ? pct(row.대여매출, prevWeek.row.대여매출) : (yoyWeek ? pct(row.대여매출, yoyWeek.row.대여매출) : null);
-        const insPct = prevWeek ? pct(row.보험매출, prevWeek.row.보험매출) : (yoyWeek ? pct(row.보험매출, yoyWeek.row.보험매출) : null);
-        const drvPct = prevWeek ? pct(row.주행매출, prevWeek.row.주행매출) : (yoyWeek ? pct(row.주행매출, yoyWeek.row.주행매출) : null);
-
-        const CIRCLED = ['⑥','⑦','⑧','⑨','⑩','⑪','⑫'];
-        top.forEach((a, idx) => {
-          const num = CIRCLED[idx] || String(idx+6); // ①~⑤ 다음 번호부터 이어서 표기
-          let text;
-          if (a.kind === 'pp'){
-            const label = a.region ? `${a.name}(${a.region})` : a.name;
-            text = `${label}이 ${a.compLabel} 대비 ${(a.vC*100).toFixed(1)}%→${(a.vT*100).toFixed(1)}%로 ${a.diff>=0?'+':''}${a.diff.toFixed(1)}%p 변동`;
-          } else if (a.name === '지역별 건수'){
-            text = `${a.region} 지역 건수가 ${a.compLabel} 대비 ${Math.round(a.vC).toLocaleString('ko-KR')}건→${Math.round(a.vT).toLocaleString('ko-KR')}건(${fmtPct(a.diff)})으로 변동`;
-          } else {
-            text = `${a.name}이 ${a.compLabel} 대비 ${Math.round(a.vC).toLocaleString('ko-KR')}원→${Math.round(a.vT).toLocaleString('ko-KR')}원(${fmtPct(a.diff)})으로 변동`;
-          }
-          // 매출 구성비 계열 지표는, 있으면 "무엇이 대신 견인했는지" 한 줄 덧붙임
-          let compose = '';
-          if ((a.name==='대여매출 비중' || a.name==='건당 대여매출' || a.name==='시간당 대여매출' || a.name==='정가 대비 할인율') && a.diff < 0 && revPct!==null && rentPct!==null && revPct >= rentPct){
-            compose = ` (반면 보험매출 ${fmtPct(insPct)}, 주행매출 ${fmtPct(drvPct)}로 총매출 ${fmtPct(revPct)} 견인)`;
-          }
-          items.push(`<b>${num} 특이 지표 — ${a.name} 변동</b> — ${text}.${compose}`);
-        });
+      const DIST_KEYS = ['50km 이하','50~100km 이하','100km 초과'];
+      const shift = biggestBucketShift(DIST_KEYS, r => r.주행거리구간별, null);
+      if (shift){
+        items.push(`<b>⑥ 주행거리 구간</b> — ${shift.key} 비중이 ${shift.compLabel} 대비 ${shift.cShare.toFixed(1)}%→${shift.tShare.toFixed(1)}%(${shift.diff>=0?'+':''}${shift.diff.toFixed(1)}%p)로 가장 크게 변동.`);
       }
     }
 
-    // 공휴일 비대칭 체크
+    // ⑦ 건당 평균이용시간 (상세지표 '건당 평균이용시간' 탭 기준)
     {
+      const t = row.건당이용시간;
+      const cmp = cmpText(r => r.건당이용시간);
+      if (t != null && cmp){
+        items.push(`<b>⑦ 건당 평균이용시간</b> — ${t.toFixed(1)}h (${cmp}).`);
+      }
+    }
+
+    // ⑧ 시간당매출 (상세지표 '시간당매출' 탭 기준: 총매출/총이용시간)
+    {
+      const getRPH = r => (r && r.총매출 != null && r.총이용시간) ? r.총매출/r.총이용시간 : null;
+      const t = getRPH(row);
+      const cmp = cmpText(getRPH);
+      if (t != null && cmp){
+        items.push(`<b>⑧ 시간당매출</b> — ${fmtNum(t,0)}원/h (${cmp}).`);
+      }
+    }
+
+    // 공휴일 비대칭 체크 (기존 로직 유지)
+    {
+      const primary = prevWeek || yoyWeek;
+      const c = primary.row;
       const tDates = weekDates(row.주시작일), cDates = weekDates(c.주시작일);
       const tHol = tDates.filter(d => KR_HOLIDAYS[d]).map(d => KR_HOLIDAYS[d]);
       const cHol = cDates.filter(d => KR_HOLIDAYS[d]).map(d => KR_HOLIDAYS[d]);
@@ -734,8 +705,8 @@
       const onlyC = cHol.filter(x => !tHol.includes(x));
       if (onlyT.length || onlyC.length){
         let msg = '⚠️ 공휴일 비대칭 — ';
-        if (onlyT.length) msg += `분석 대상 주에 [${onlyT.join(', ')}] 포함, ${primary.label}에는 없음. `;
-        if (onlyC.length) msg += `${primary.label}에 [${onlyC.join(', ')}] 포함, 분석 대상 주에는 없음 — 상대적 하락처럼 보일 수 있음.`;
+        if (onlyT.length) msg += `분석 대상 주에 [${onlyT.join(', ')}] 포함, 비교 시점에는 없음. `;
+        if (onlyC.length) msg += `비교 시점에 [${onlyC.join(', ')}] 포함, 분석 대상 주에는 없음 — 상대적 변동처럼 보일 수 있음.`;
         items.push(msg);
       } else {
         items.push('(공휴일 비대칭 없음 — 순수 요일 효과로 해석 가능)');
