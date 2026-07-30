@@ -135,7 +135,7 @@
     <button class="tab-btn" data-tab="revperhour">시간당매출</button>
   </div>
   </div>
-  <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px;"></span><label class="year-cb-label" style="margin-right:0;"><input type="checkbox" id="revCompositionToggle"> 매출구성비율 표시 (대여/보험/주행 %)</label></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-firstuse" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="firstUseBucketBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
@@ -797,6 +797,45 @@
     weekend: { label: '주말', key: '주말' },
   };
   let selectedRevPerCarGroup = 'total';
+  let showRevComposition = false; // 매출구성비율(대여/보험/주행 %) 라벨을 각 점 위에 표시할지 여부
+
+  // 매출구성비율 = 대여매출(예약결제요금)/보험매출(면책보험료)/주행매출(주행요금) 각각을 총매출(총청구요금)로 나눈 비중(%).
+  function getRevComposition(row){
+    if (!row || !row.총매출) return null;
+    const rent = Math.round((row.대여매출 / row.총매출) * 1000) / 10;
+    const ins = Math.round((row.보험매출 / row.총매출) * 1000) / 10;
+    const drive = Math.round((row.주행매출 / row.총매출) * 1000) / 10;
+    return { rent, ins, drive };
+  }
+
+  // 라인 위에 "대41% 보25% 주33%" 텍스트를 각 점 위에 그리는 Chart.js 플러그인.
+  // 여러 연도가 선택된 경우 라벨이 겹치지 않도록 가장 최근(마지막) 연도 라인에만 표시.
+  function makeRevCompositionPlugin(rowsForLabels){
+    return {
+      id: 'revCompositionLabels',
+      afterDatasetsDraw(chart){
+        if (!showRevComposition) return;
+        if (!chart.data.datasets.length) return;
+        const dsIndex = chart.data.datasets.length - 1;
+        const meta = chart.getDatasetMeta(dsIndex);
+        if (!meta || !meta.data) return;
+        const ctx = chart.ctx;
+        ctx.save();
+        ctx.font = '9px NanumSquare, sans-serif';
+        ctx.textAlign = 'center';
+        meta.data.forEach((point, idx) => {
+          const row = rowsForLabels[idx];
+          const comp = getRevComposition(row);
+          if (!comp || !point) return;
+          const x = point.x, y = point.y - 8;
+          ctx.fillStyle = '#8e5ea2'; ctx.fillText(`대${comp.rent}%`, x, y - 24);
+          ctx.fillStyle = '#2a9d8f'; ctx.fillText(`보${comp.ins}%`, x, y - 14);
+          ctx.fillStyle = '#c2536a'; ctx.fillText(`주${comp.drive}%`, x, y - 4);
+        });
+        ctx.restore();
+      }
+    };
+  }
 
   function renderRevPerCarGroupBar(){
     const wrap = document.getElementById('revPerCarGroupBar');
@@ -1042,11 +1081,14 @@
           fill:false, tension:0.15, spanGaps:true, pointRadius:2
         }));
       }
+      const lastYearRows = years.length ? yearRowsMap[years[years.length-1]] : [];
       charts['chartTrendRevPerCar'] = new Chart(elRevPerCar.getContext('2d'), {
         type: 'line',
         data: { labels: displayLabels, datasets },
+        plugins: [makeRevCompositionPlugin(lastYearRows)],
         options: {
           responsive: true, maintainAspectRatio: false,
+          layout: { padding: { top: showRevComposition ? 34 : 0 } },
           plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
@@ -1707,6 +1749,14 @@
   renderFirstUseBucketBar();
   renderRevPerHourMetricBar();
   renderCouponDurCheckboxes();
+  const revCompToggle = document.getElementById('revCompositionToggle');
+  if (revCompToggle){
+    revCompToggle.checked = showRevComposition;
+    revCompToggle.addEventListener('change', () => {
+      showRevComposition = revCompToggle.checked;
+      renderTrend();
+    });
+  }
   renderTrend();
   const saved = localStorage.getItem('wsr_last_week');
   const initial = (saved && DATA_MAP[saved]) ? saved : MAX_WEEK;
