@@ -1006,7 +1006,7 @@
       options: Object.assign({
         responsive: true, maintainAspectRatio: false,
         layout: sideLabels ? { padding: { right: 46 } } : undefined,
-        plugins: { legend: { display: datasets.length>1, position:'top', labels:{boxWidth:12,font:{size:11}} } },
+        plugins: { legend: { display: datasets.length>1, position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
         scales: { y: { beginAtZero: true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:10}} } }
       }, opts || {})
     });
@@ -1074,7 +1074,7 @@
         data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1090,7 +1090,7 @@
         data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1133,7 +1133,7 @@
         options: {
           responsive: true, maintainAspectRatio: false,
           layout: { padding: { top: selectedRevComposition === 'off' ? 0 : 22 } },
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:10}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1167,7 +1167,7 @@
         data: { labels: displayLabels, datasets: durDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:10}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1201,7 +1201,7 @@
         data: { labels: displayLabels, datasets: distDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:10}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1221,7 +1221,7 @@
         data: { labels: displayLabels, datasets: vehDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:false, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1241,7 +1241,7 @@
         data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1266,7 +1266,7 @@
         data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1296,7 +1296,7 @@
         data: { labels: displayLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
@@ -1323,7 +1323,7 @@
         data: { labels: monthLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: {
             y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:10}} }
@@ -1362,7 +1362,7 @@
         data: { labels: displayLabels, datasets: reuseDatasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:10}} } },
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:10}} } },
           scales: {
             y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} }
