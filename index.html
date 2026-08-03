@@ -1640,7 +1640,7 @@
     const row = DATA_MAP[weekStart];
     const content = document.getElementById('content');
     const badges = document.getElementById('badges');
-    destroyCharts(['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate']);
+    destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate']);
 
     document.getElementById('subhead').textContent =
       `데이터 보유 기간: ${MIN_WEEK} ~ ${MAX_WEEK} (총 ${ALL_WEEKS.length}주)  ·  주간 실적 기준 (월~일 7일 합산)`;
