@@ -925,7 +925,7 @@
     wrap.innerHTML = AVAILABLE_YEARS.map(y => `
       <label class="year-cb-label">
         <input type="checkbox" class="year-cb" value="${y}" ${selectedYears.includes(y) ? 'checked' : ''}>
-        <span style="color:${YEAR_COLORS[y]};">●</span> ${y}년
+        ${y}년
       </label>`).join('');
     wrap.querySelectorAll('.year-cb').forEach(cb => {
       cb.addEventListener('change', () => {
