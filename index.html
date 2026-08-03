@@ -132,6 +132,7 @@
   <div class="tab-bar-wrap">
   <div class="tab-bar" id="trendTabBar">
     <span style="font-weight:700; color:#333; font-size:13px; display:flex; align-items:center; margin-right:2px;">필터 :</span>
+    <button class="tab-btn" data-tab="vehcount">차량수</button>
     <button class="tab-btn active" data-tab="revpercar">대당매출</button>
     <button class="tab-btn" data-tab="firstuse">첫이용자</button>
     <button class="tab-btn" data-tab="reuserate">재이용률</button>
@@ -142,6 +143,7 @@
     <button class="tab-btn" data-tab="revperhour">시간당매출</button>
   </div>
   </div>
+  <div class="chart-box" id="trendTabBox-vehcount" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 대 (일자별_차량수 기준 주간 평균)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendVehCount"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px; margin-bottom:8px;"></span><div style="font-size:11px; color:#666; margin-bottom:4px;">매출구성비율 표시:</div><span id="revCompositionBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-firstuse" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="firstUseBucketBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
@@ -1057,7 +1059,7 @@
       return posFromEnd === 0 ? [] : (patterns[posFromEnd - 1] || [1,1]);
     }
 
-    ['chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
     const yearRowsMap = {};
     years.forEach(y => { yearRowsMap[y] = yearRows(y); });
@@ -1205,7 +1207,27 @@
       });
     }
 
-        // 건당 평균이용시간 트렌드
+        // 차량수 트렌드 (일자별_차량수.xlsx 기반 주간 평균 — 각 주 레코드의 차량수 필드 그대로 사용)
+    const elVehCount = document.getElementById('chartTrendVehCount');
+    if (elVehCount){
+      const vehDatasets = years.map((y,i) => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => (r && r.차량수 != null) ? r.차량수 : null),
+        borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+        borderDash: dashForIndex(i, years.length),
+        fill:false, tension:0.15, spanGaps:true, pointRadius:2
+      }));
+      charts['chartTrendVehCount'] = new Chart(elVehCount.getContext('2d'), {
+        type: 'line',
+        data: { labels: displayLabels, datasets: vehDatasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'top', labels:{boxWidth:12,font:{size:11}} } },
+          scales: { y: { beginAtZero:false, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+        }
+      });
+    }
+
+    // 건당 평균이용시간 트렌드
     const elAvgDuration = document.getElementById('chartTrendAvgDuration');
     if (elAvgDuration){
       const datasets = years.map((y,i) => ({
@@ -1832,6 +1854,7 @@
       if (!btn) return;
       const tab = btn.dataset.tab;
       trendTabBar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.getElementById('trendTabBox-vehcount').style.display = (tab === 'vehcount') ? '' : 'none';
       document.getElementById('trendTabBox-revpercar').style.display = (tab === 'revpercar') ? '' : 'none';
       document.getElementById('trendTabBox-duration').style.display = (tab === 'duration') ? '' : 'none';
       document.getElementById('trendTabBox-distance').style.display = (tab === 'distance') ? '' : 'none';
@@ -1840,6 +1863,7 @@
       document.getElementById('trendTabBox-convrate').style.display = (tab === 'convrate') ? '' : 'none';
       document.getElementById('trendTabBox-firstuse').style.display = (tab === 'firstuse') ? '' : 'none';
       document.getElementById('trendTabBox-reuserate').style.display = (tab === 'reuserate') ? '' : 'none';
+      if (charts['chartTrendVehCount']) charts['chartTrendVehCount'].resize();
       if (charts['chartTrendRevPerCar']) charts['chartTrendRevPerCar'].resize();
       if (charts['chartTrendDuration']) charts['chartTrendDuration'].resize();
       if (charts['chartTrendDistance']) charts['chartTrendDistance'].resize();
