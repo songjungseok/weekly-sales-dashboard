@@ -158,7 +158,7 @@
     </div>
   </div>
   <div class="chart-box" id="trendTabBox-convrate" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : %</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-revperhour" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="revPerHourMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerHour"></canvas></div></div></div>
@@ -785,6 +785,24 @@
   const FIRSTUSE_BUCKET_LABELS = {'4시간 이하':'4시간이하', '4시간~24시간 이하':'4-24시간이하', '24시간 초과':'24시간초과'};
   let selectedFirstUseBuckets = FIRSTUSE_BUCKETS.slice(); // 기본값: 3구간 전체 선택(= 전체 첫이용자수와 동일)
 
+  const DURATION_METRICS = { count: { label: '건수' }, revenue: { label: '매출' } };
+  let trendDurationMetric = 'count';
+
+  function renderDurationMetricBar(){
+    const wrap = document.getElementById('durationMetricBar');
+    if (!wrap) return;
+    wrap.innerHTML = Object.keys(DURATION_METRICS).map(key => `
+      <button type="button" class="tab-btn dm-btn${key===trendDurationMetric ? ' active' : ''}" data-metric="${key}" style="font-size:11.5px; padding:5px 12px;">${DURATION_METRICS[key].label}</button>
+    `).join('');
+    wrap.querySelectorAll('.dm-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        trendDurationMetric = btn.dataset.metric;
+        renderDurationMetricBar();
+        renderTrend();
+      });
+    });
+  }
+
   function renderFirstUseBucketBar(){
     const wrap = document.getElementById('firstUseBucketBar');
     if (!wrap) return;
@@ -1146,10 +1164,13 @@
       { label: '4시간~24시간 이하', key: '4시간~24시간 이하', color: '#e2a53d' },
       { label: '24시간 초과', key: '24시간 초과', color: '#b5495b' },
     ];
+    const DUR_TREND_FIELD = trendDurationMetric === 'revenue' ? '이용시간구간별매출' : '이용시간구간별';
     function getDur(row, key){
-      if (!row || !row.이용시간구간별) return null;
-      return row.이용시간구간별[key] != null ? row.이용시간구간별[key] : null;
+      if (!row || !row[DUR_TREND_FIELD]) return null;
+      return row[DUR_TREND_FIELD][key] != null ? row[DUR_TREND_FIELD][key] : null;
     }
+    const durUnitLabel = document.getElementById('durationUnitLabel');
+    if (durUnitLabel) durUnitLabel.textContent = trendDurationMetric === 'revenue' ? '단위 : 원' : '단위 : 건';
     const elDuration = document.getElementById('chartTrendDuration');
     if (elDuration){
       const durDatasets = [];
@@ -1895,6 +1916,7 @@
   renderYearCheckboxes();
   renderRevPerCarGroupBar();
   renderFirstUseBucketBar();
+  renderDurationMetricBar();
   renderRevPerHourMetricBar();
   renderCouponDurCheckboxes();
   renderRevCompositionBar();
