@@ -149,7 +149,10 @@
   <div class="chart-box" id="trendTabBox-firstuse" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="firstUseBucketBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
-      <div style="flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius: 0; padding:8px 12px; margin-bottom:8px;">
+      <div style="flex:0 0 auto; margin-bottom:8px;">
+        <button type="button" id="reuseDefToggleBtn" onclick="(function(){var b=document.getElementById('reuseDefBox');var btn=document.getElementById('reuseDefToggleBtn');var show=(b.style.display==='none');b.style.display=show?'block':'none';btn.textContent=show?'재이용률 정의 닫기 \u2715':'재이용률 정의 보기 \u24d8';})()" style="font-size:11.5px; font-weight:600; color:#556; background:#eef2f6; border:1px solid #d5dbe1; border-radius:999px; padding:5px 12px; cursor:pointer;">재이용률 정의 보기 \u24d8</button>
+      </div>
+      <div id="reuseDefBox" style="display:none; flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius: 0; padding:8px 12px; margin-bottom:8px;">
         <b style="color:#333;">재이용률 정의:</b> 전주 이용자수 ÷ 금주 이용자수 (시간 구간별) &nbsp;|&nbsp;
         예) 금주 4시간미만 이용자 10명 中 전주 4시간미만 이용자 3명 = 30% (전주 4시간미만 이용자 3명, 미이용자 5명, 24시간 초과 이용자 2명)
         <span style="color:#999;">(단위 : %)</span>
