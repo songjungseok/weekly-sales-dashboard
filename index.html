@@ -19,27 +19,39 @@
   }
   .app-layout { display: flex; align-items: stretch; min-height: 100vh; }
   .sidebar {
-    flex: 0 0 216px; width: 216px; background: #0d1420; color: #c7d0dc;
-    padding: 22px 14px; box-sizing: border-box; position: sticky; top: 0; align-self: flex-start;
-    height: 100vh; overflow-y: auto;
+    flex: 0 0 248px; width: 248px; background: #0d1420; color: #c7d0dc;
+    padding: 26px 18px; box-sizing: border-box; position: sticky; top: 0; align-self: flex-start;
+    height: 100vh; overflow-y: auto; display: flex; flex-direction: column;
   }
-  .sidebar-brand { font-size: 14.5px; font-weight: 800; color: #fff; letter-spacing: 0.3px; margin-bottom: 2px; }
-  .sidebar-brand-sub { font-size: 10px; color: #6b7789; letter-spacing: 1px; margin-bottom: 22px; }
-  .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+  .sidebar-logo {
+    width: 38px; height: 38px; border: 1.5px solid #2dd4bf; color: #2dd4bf;
+    display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 800;
+    margin-bottom: 14px;
+  }
+  .sidebar-brand { font-size: 17px; font-weight: 800; color: #fff; letter-spacing: 0.3px; margin-bottom: 3px; }
+  .sidebar-brand-sub { font-size: 10.5px; color: #6b7789; letter-spacing: 1.5px; margin-bottom: 30px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 6px; }
   .sidebar-item {
-    display: flex; align-items: center; gap: 10px; padding: 10px 10px;
-    font-size: 13px; font-weight: 700; color: #9aa7b8; cursor: pointer;
+    display: flex; align-items: center; gap: 12px; padding: 13px 12px;
+    font-size: 14.5px; font-weight: 700; color: #9aa7b8; cursor: pointer;
     border-left: 3px solid transparent; user-select: none;
   }
-  .sidebar-item .num { font-size: 10.5px; color: #4d596b; font-weight: 800; width: 16px; flex: 0 0 16px; }
+  .sidebar-item .num { font-size: 11px; color: #4d596b; font-weight: 800; width: 18px; flex: 0 0 18px; }
   .sidebar-item:hover { background: #141f2d; color: #e8edf2; }
   .sidebar-item.active { background: #16212f; color: #fff; border-left-color: #2dd4bf; }
   .sidebar-item.active .num { color: #2dd4bf; }
-  .main-area { flex: 1; min-width: 0; padding: 20px 24px 40px; }
+  .sidebar-status {
+    margin-top: auto; padding-top: 18px; border-top: 1px solid #1c2938;
+    font-size: 11.5px; color: #7c8aa0; display: flex; flex-direction: column; gap: 6px;
+  }
+  .sidebar-status .dot-row { display: flex; align-items: center; gap: 8px; color: #d7dee7; font-weight: 700; font-size: 12.5px; }
+  .sidebar-status .dot { width: 7px; height: 7px; background: #2dd4bf; flex: 0 0 7px; }
+  .main-area { flex: 1; min-width: 0; padding: 28px 32px 48px; }
   .page-content { display: none; }
   .page-content.active { display: block; }
-  h1 { font-size: 20px; margin: 0 0 4px; font-weight: 800; }
-  .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
+  .page-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.8px; color: #8a97a8; margin-bottom: 8px; }
+  h1 { font-size: 26px; margin: 0 0 8px; font-weight: 800; letter-spacing: -0.3px; }
+  .sub { color: #666; font-size: 13.5px; margin-bottom: 24px; }
   .toolbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     background: #fff; border: 1px solid #e5e5e7; border-radius: 0;
@@ -65,24 +77,24 @@
     text-align: center; color: #666; font-size: 14px;
   }
   .kpi-grid {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 22px;
   }
   @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 14px 16px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 17px 18px;
   }
-  .kpi-label { font-size: 12px; color: #777; font-weight: 600; margin-bottom: 4px; }
-  .kpi-value { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
-  .kpi-comp { font-size: 11.5px; color: #666; display: flex; justify-content: space-between; padding: 1.5px 0; }
+  .kpi-label { font-size: 12.5px; color: #777; font-weight: 600; margin-bottom: 6px; }
+  .kpi-value { font-size: 23px; font-weight: 800; margin-bottom: 9px; letter-spacing: -0.3px; }
+  .kpi-comp { font-size: 12px; color: #666; display: flex; justify-content: space-between; padding: 2px 0; }
   .kpi-comp .d-up { color: #d0342c; font-weight: 700; }
   .kpi-comp .d-down { color: #2266cc; font-weight: 700; }
   .kpi-comp .d-flat { color: #888; }
   .section {
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 16px 18px; margin-bottom: 16px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 20px 22px; margin-bottom: 20px;
   }
-  .section h2 { font-size: 14px; margin: 0 0 10px; color: #333; }
-  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .section h2 { font-size: 15px; margin: 0 0 12px; color: #333; font-weight: 700; }
+  .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
   @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
   .chart-box { position: relative; height: 260px; }
   .chart-box.tall { height: 320px; }
@@ -124,11 +136,16 @@
 <body>
 <div class="app-layout">
   <div class="sidebar">
-    <div class="sidebar-brand">Weekly Sales Report</div>
-    <div class="sidebar-brand-sub">DASHBOARD</div>
+    <div class="sidebar-logo">W</div>
+    <div class="sidebar-brand">Weekly Sales</div>
+    <div class="sidebar-brand-sub">REPORT DASHBOARD</div>
     <div class="sidebar-nav">
       <div class="sidebar-item active" data-page="page1"><span class="num">01</span><span>주간 실적</span></div>
       <div class="sidebar-item" data-page="page2"><span class="num">02</span><span>쿠폰별 사용량</span></div>
+    </div>
+    <div class="sidebar-status">
+      <div class="dot-row"><span class="dot"></span>자동 업데이트 정상</div>
+      <div>매주 월요일 09:00 갱신 · GitHub Pages</div>
     </div>
   </div>
   <div class="main-area">
@@ -136,6 +153,7 @@
     <div id="page1" class="page-content active">
 
 
+<div class="page-eyebrow">WEEKLY PERFORMANCE OVERVIEW</div>
 <h1>Weekly Sales Report 대시보드</h1>
 
 <div class="section" id="revenueForecastSection" style="display:none; border:1.5px solid #cfe0d8; background:#f6fbf8;">
@@ -232,6 +250,7 @@
     </div>
 
     <div id="page2" class="page-content">
+      <div class="page-eyebrow">COUPON USAGE ANALYSIS</div>
       <h1>🎟️ 쿠폰별 사용량</h1>
       <div class="sub">전주 vs 이번 주 쿠폰 사용 현황입니다 (🆕 최근 3주 내 신규 쿠폰 포함). 주 선택은 '주간 실적' 페이지의 선택을 따릅니다.</div>
       <div id="content2"></div>
