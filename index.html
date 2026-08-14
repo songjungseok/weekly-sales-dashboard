@@ -21,16 +21,16 @@
   .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
   .toolbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 12px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0;
     padding: 12px 16px; margin-bottom: 18px;
   }
   .toolbar label { font-size: 13px; color: #444; font-weight: 600; }
   .toolbar select {
-    font-size: 13px; padding: 6px 10px; border: 1px solid #d5d5d8; border-radius: 8px;
+    font-size: 13px; padding: 6px 10px; border: 1px solid #d5d5d8; border-radius: 0;
     font-family: inherit; max-width: 240px;
   }
   .navbtn {
-    border: 1px solid #d5d5d8; background: #fff; border-radius: 8px; padding: 6px 12px;
+    border: 1px solid #d5d5d8; background: #fff; border-radius: 0; padding: 6px 12px;
     cursor: pointer; font-size: 13px; color: #333;
   }
   .navbtn:hover { background: #f0f0f2; }
@@ -40,7 +40,7 @@
   }
   .badge.corr { background: #eaf2fd; color: #2266cc; }
   .empty {
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 12px; padding: 40px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 40px;
     text-align: center; color: #666; font-size: 14px;
   }
   .kpi-grid {
@@ -49,7 +49,7 @@
   @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 12px; padding: 14px 16px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 14px 16px;
   }
   .kpi-label { font-size: 12px; color: #777; font-weight: 600; margin-bottom: 4px; }
   .kpi-value { font-size: 20px; font-weight: 700; margin-bottom: 8px; letter-spacing: -0.3px; }
@@ -58,7 +58,7 @@
   .kpi-comp .d-down { color: #2266cc; font-weight: 700; }
   .kpi-comp .d-flat { color: #888; }
   .section {
-    background: #fff; border: 1px solid #e5e5e7; border-radius: 12px; padding: 16px 18px; margin-bottom: 16px;
+    background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 16px 18px; margin-bottom: 16px;
   }
   .section h2 { font-size: 14px; margin: 0 0 10px; color: #333; }
   .charts-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -85,7 +85,7 @@
     border-radius: 999px; padding: 1px 7px; margin-left: 6px; vertical-align: middle;
   }
   .tab-bar-wrap {
-    background: #f4f6f8; border: 1px solid #dde2e7; border-radius: 10px;
+    background: #f4f6f8; border: 1px solid #dde2e7; border-radius: 0;
     padding: 10px 14px; margin-bottom: 14px;
   }
   .tab-bar { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -145,11 +145,11 @@
   </div>
   </div>
   <div class="chart-box" id="trendTabBox-vehcount" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 대 (일자별_차량수 기준 주간 평균)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendVehCount"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px; margin-bottom:8px;"></span><div style="font-size:11px; color:#666; margin-bottom:4px;">매출구성비율 표시:</div><span id="revCompositionBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-firstuse" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="firstUseBucketBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-revpercar" style="height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="revPerCarGroupBar" class="tab-bar" style="gap:6px; margin-bottom:8px;"></span><div style="font-size:11px; color:#666; margin-bottom:4px;">매출구성비율 표시:</div><span id="revCompositionBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerCar"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-firstuse" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="firstUseBucketBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 명</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendFirstUse"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-reuserate" style="display:none; height:490px;">
     <div style="display:flex; flex-direction:column; height:100%;">
-      <div style="flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius:8px; padding:8px 12px; margin-bottom:8px;">
+      <div style="flex:0 0 auto; font-size:11.5px; color:#666; line-height:1.6; background:#fafafa; border:1px solid #eee; border-radius: 0; padding:8px 12px; margin-bottom:8px;">
         <b style="color:#333;">재이용률 정의:</b> 전주 이용자수 ÷ 금주 이용자수 (시간 구간별) &nbsp;|&nbsp;
         예) 금주 4시간미만 이용자 10명 中 전주 4시간미만 이용자 3명 = 30% (전주 4시간미만 이용자 3명, 미이용자 5명, 24시간 초과 이용자 2명)
         <span style="color:#999;">(단위 : %)</span>
@@ -158,10 +158,10 @@
     </div>
   </div>
   <div class="chart-box" id="trendTabBox-convrate" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : %</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-revperhour" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius:8px; padding:8px 10px;"><span id="revPerHourMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerHour"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-revperhour" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="revPerHourMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerHour"></canvas></div></div></div>
 </div>
 
 <div class="toolbar">
@@ -1750,14 +1750,14 @@
       </div>
       <div class="section">
         <h2>🎟️ 쿠폰별 사용량 Top10 — 전주 vs 이번 주 (🆕 최근 3주 내 신규 쿠폰 포함)</h2>
-        <div style="background:#f4f6f8; border:1px solid #dde2e7; border-radius:10px; padding:12px 16px; margin-bottom:14px;">
+        <div style="background:#f4f6f8; border:1px solid #dde2e7; border-radius: 0; padding:12px 16px; margin-bottom:14px;">
           <div style="margin-bottom:10px;">
             <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">⏱ 이용시간 구간 필터</span>
             <span id="couponDurCheckboxes"></span>
           </div>
           <div>
             <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">🚗 차량유형 필터</span>
-            <select id="couponVtypeFilter" style="font-size:13px; font-weight:600; color:#1a2b3c; padding:6px 14px; border-radius:8px; border:1.5px solid #1a2b3c; background:#fff; font-family:inherit; cursor:pointer;"></select>
+            <select id="couponVtypeFilter" style="font-size:13px; font-weight:600; color:#1a2b3c; padding:6px 14px; border-radius: 0; border:1.5px solid #1a2b3c; background:#fff; font-family:inherit; cursor:pointer;"></select>
           </div>
         </div>
         <div id="couponTableWrap"></div>
