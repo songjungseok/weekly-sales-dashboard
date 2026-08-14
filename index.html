@@ -15,8 +15,29 @@
     font-family: 'NanumSquare', -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, Arial, sans-serif;
     background: #f7f7f8;
     color: #1a1a1a;
-    padding: 20px 24px 40px;
+    padding: 0;
   }
+  .app-layout { display: flex; align-items: stretch; min-height: 100vh; }
+  .sidebar {
+    flex: 0 0 216px; width: 216px; background: #0d1420; color: #c7d0dc;
+    padding: 22px 14px; box-sizing: border-box; position: sticky; top: 0; align-self: flex-start;
+    height: 100vh; overflow-y: auto;
+  }
+  .sidebar-brand { font-size: 14.5px; font-weight: 800; color: #fff; letter-spacing: 0.3px; margin-bottom: 2px; }
+  .sidebar-brand-sub { font-size: 10px; color: #6b7789; letter-spacing: 1px; margin-bottom: 22px; }
+  .sidebar-nav { display: flex; flex-direction: column; gap: 3px; }
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px; padding: 10px 10px;
+    font-size: 13px; font-weight: 700; color: #9aa7b8; cursor: pointer;
+    border-left: 3px solid transparent; user-select: none;
+  }
+  .sidebar-item .num { font-size: 10.5px; color: #4d596b; font-weight: 800; width: 16px; flex: 0 0 16px; }
+  .sidebar-item:hover { background: #141f2d; color: #e8edf2; }
+  .sidebar-item.active { background: #16212f; color: #fff; border-left-color: #2dd4bf; }
+  .sidebar-item.active .num { color: #2dd4bf; }
+  .main-area { flex: 1; min-width: 0; padding: 20px 24px 40px; }
+  .page-content { display: none; }
+  .page-content.active { display: block; }
   h1 { font-size: 20px; margin: 0 0 4px; font-weight: 800; }
   .sub { color: #666; font-size: 13px; margin-bottom: 18px; }
   .toolbar {
@@ -101,6 +122,19 @@
 </style>
 </head>
 <body>
+<div class="app-layout">
+  <div class="sidebar">
+    <div class="sidebar-brand">Weekly Sales Report</div>
+    <div class="sidebar-brand-sub">DASHBOARD</div>
+    <div class="sidebar-nav">
+      <div class="sidebar-item active" data-page="page1"><span class="num">01</span><span>주간 실적</span></div>
+      <div class="sidebar-item" data-page="page2"><span class="num">02</span><span>쿠폰별 사용량</span></div>
+    </div>
+  </div>
+  <div class="main-area">
+
+    <div id="page1" class="page-content active">
+
 
 <h1>Weekly Sales Report 대시보드</h1>
 
@@ -194,6 +228,28 @@
 <div id="content"></div>
 
 <div class="foot" id="footNote"></div>
+
+    </div>
+
+    <div id="page2" class="page-content">
+      <h1>🎟️ 쿠폰별 사용량</h1>
+      <div class="sub">전주 vs 이번 주 쿠폰 사용 현황입니다 (🆕 최근 3주 내 신규 쿠폰 포함). 주 선택은 '주간 실적' 페이지의 선택을 따릅니다.</div>
+      <div id="content2"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.sidebar-item').forEach(function(item){
+    item.addEventListener('click', function(){
+      document.querySelectorAll('.sidebar-item').forEach(function(i){ i.classList.remove('active'); });
+      document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
+      item.classList.add('active');
+      document.getElementById(item.dataset.page).classList.add('active');
+    });
+  });
+</script>
 
 <script id="monthly-conv-data" type="application/json">{"2025-01": {"이용자수": 27719, "방문자수": 144512}, "2025-02": {"이용자수": 26173, "방문자수": 135683}, "2025-03": {"이용자수": 29724, "방문자수": 143092}, "2025-04": {"이용자수": 30293, "방문자수": 146687}, "2025-05": {"이용자수": 34775, "방문자수": 157554}, "2025-06": {"이용자수": 34264, "방문자수": 163356}, "2025-07": {"이용자수": 35611, "방문자수": 185921}, "2025-08": {"이용자수": 36998, "방문자수": 195463}, "2025-09": {"이용자수": 31094, "방문자수": 173454}, "2025-10": {"이용자수": 33595, "방문자수": 175171}, "2025-11": {"이용자수": 32621, "방문자수": 152963}, "2025-12": {"이용자수": 30755, "방문자수": 161306}, "2026-01": {"이용자수": 26074, "방문자수": 146596}, "2026-02": {"이용자수": 25900, "방문자수": 143219}, "2026-03": {"이용자수": 25199, "방문자수": 137506}, "2026-04": {"이용자수": 27670, "방문자수": 143384}, "2026-05": {"이용자수": 30722, "방문자수": 159081}, "2026-06": {"이용자수": 27155, "방문자수": 155952}, "2026-07": {"이용자수": 26282, "방문자수": 154484}, "2026-08": {"이용자수": 13530, "방문자수": 67949}}</script>
 <script id="revenue-forecast-data" type="application/json">{"기준월": "2026-08", "업데이트": "2026-08-09", "실적일수": 9, "예측일수": 22, "누적실적": 1100684286, "예측잔여": 2451250038, "월말예측": 3551934324, "목표": 4599801547.0, "달성률": 77.2}</script>
@@ -1680,7 +1736,8 @@
 
   function render(weekStart){
     const row = DATA_MAP[weekStart];
-    const content = document.getElementById('content');
+    const content = document.getElementById('content')
+    const content2 = document.getElementById('content2');
     const badges = document.getElementById('badges');
     destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate']);
 
@@ -1767,6 +1824,17 @@
         </div>
       </div>
       <div class="section">
+        <h2>🔎 비교 기준 안내</h2>
+        <ul class="insight-list">
+          <li><b>분석 대상 주</b> — ${row.주시작일} ~ ${row.주종료일} (월~일)</li>
+          <li><b>전주</b> — ${prevWeek ? `${prevWeek.row.주시작일} ~ ${prevWeek.row.주종료일}` : '데이터 없음'}</li>
+          <li><b>전년동기</b> — ${yoyWeek ? `${yoyWeek.row.주시작일} ~ ${yoyWeek.row.주종료일} (364일 전, 동일 요일 기준)` : '데이터 없음'}</li>
+          ${row.보정적용 ? '<li>⚠️ 이번 주 최근 일자 데이터는 미반납 차량의 주행매출·총매출·건당운행거리에 회귀 보정값이 포함될 수 있습니다 (* 표시 지표).</li>' : ''}
+        </ul>
+      </div>
+    `;
+    content.innerHTML = html;
+    content2.innerHTML = `<div class="section">
         <h2>🎟️ 쿠폰별 사용량 Top10 — 전주 vs 이번 주 (🆕 최근 3주 내 신규 쿠폰 포함)</h2>
         <div style="background:#f4f6f8; border:1px solid #dde2e7; border-radius: 0; padding:12px 16px; margin-bottom:14px;">
           <div style="margin-bottom:10px;">
@@ -1779,18 +1847,7 @@
           </div>
         </div>
         <div id="couponTableWrap"></div>
-      </div>
-      <div class="section">
-        <h2>🔎 비교 기준 안내</h2>
-        <ul class="insight-list">
-          <li><b>분석 대상 주</b> — ${row.주시작일} ~ ${row.주종료일} (월~일)</li>
-          <li><b>전주</b> — ${prevWeek ? `${prevWeek.row.주시작일} ~ ${prevWeek.row.주종료일}` : '데이터 없음'}</li>
-          <li><b>전년동기</b> — ${yoyWeek ? `${yoyWeek.row.주시작일} ~ ${yoyWeek.row.주종료일} (364일 전, 동일 요일 기준)` : '데이터 없음'}</li>
-          ${row.보정적용 ? '<li>⚠️ 이번 주 최근 일자 데이터는 미반납 차량의 주행매출·총매출·건당운행거리에 회귀 보정값이 포함될 수 있습니다 (* 표시 지표).</li>' : ''}
-        </ul>
-      </div>
-    `;
-    content.innerHTML = html;
+      </div>`;
 
     // 대당(차량 1대당) 정규화 헬퍼 — 각 주차 자신의 최근 30일 활성차량수(또는 유형별 차량수)로 나눔.
     // 예: 이번 주에 전기차가 50대→150대로 늘었다면, 전주 건수는 50으로, 이번 주 건수는 150으로 나눠 비교.
