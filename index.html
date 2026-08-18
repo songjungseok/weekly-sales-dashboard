@@ -175,6 +175,14 @@
   .idle-veh-spot { flex: 1; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .idle-veh-date { width: 90px; flex: 0 0 90px; text-align: right; color: #888; }
   .idle-veh-empty { font-size: 12px; color: #999; padding: 8px 0; }
+  .idle-hint {
+    font-size: 12px; color: #8a5a10; background: #fdf3e3; border: 1px solid #f0d9a8;
+    border-radius: 0; padding: 8px 12px; margin-bottom: 10px; display: inline-flex;
+    align-items: center; gap: 6px; font-weight: 600;
+  }
+  .alert-item-chevron { display: inline-block; margin-left: 6px; font-size: 11px; color: inherit; transition: transform 0.15s ease; }
+  .alert-item.expanded .alert-item-chevron { transform: rotate(90deg); }
+  .alert-item.idle:hover { background: #fdf7ec; }
   .tab-bar-wrap {
     background: #f4f6f8; border: 1px solid #dde2e7; border-radius: 0;
     padding: 10px 14px; margin-bottom: 14px;
@@ -412,6 +420,7 @@
               <div class="alert-count" id="idleCount" style="color:#c9791a;">—</div>
             </div>
           </div>
+          <div class="idle-hint">👆 제휴사를 클릭하면 미가동 차량 리스트를 확인할 수 있어요</div>
           <div id="idleList"></div>
         </div>
       </div>
@@ -2278,7 +2287,7 @@
             <div class="alert-item-name">${e.name}</div>
             <div class="alert-item-sub">최근 30일 차량수 ${e.total.toLocaleString('ko-KR')}대 · 이번 주 미가동 ${e.idle.toLocaleString('ko-KR')}대</div>
           </div>
-          <div class="alert-item-link">${e.idle.toLocaleString('ko-KR')}대 ›</div>
+          <div class="alert-item-link">${e.idle.toLocaleString('ko-KR')}대<span class="alert-item-chevron">▸</span></div>
         </div>
         <div class="idle-veh-panel" id="idleVehPanel-${idx}">
           <div class="idle-veh-head">
@@ -2292,6 +2301,7 @@
       item.addEventListener('click', () => {
         const panel = document.getElementById(`idleVehPanel-${item.dataset.idx}`);
         if (panel) panel.classList.toggle('open');
+        item.classList.toggle('expanded');
       });
     });
   }
