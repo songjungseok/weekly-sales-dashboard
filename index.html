@@ -166,15 +166,16 @@
   .idle-veh-panel { display: none; padding: 8px 4px 12px 18px; background: #fafafa; border-bottom: 1px solid #eee; }
   .idle-veh-panel.open { display: block; }
   .idle-veh-head { display: flex; gap: 12px; font-size: 11px; font-weight: 700; color: #999; padding: 6px 0 4px; border-bottom: 1px solid #e5e5e5; }
-  .idle-veh-head span:nth-child(1) { width: 150px; flex: 0 0 150px; }
-  .idle-veh-head span:nth-child(2) { flex: 1; }
-  .idle-veh-head span:nth-child(3) { width: 90px; flex: 0 0 90px; text-align: right; }
-  .idle-veh-row { display: flex; gap: 12px; font-size: 12px; color: #333; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+  .idle-veh-head span:nth-child(1) { width: 100px; flex: 0 0 100px; }
+  .idle-veh-head span:nth-child(2) { width: 150px; flex: 0 0 150px; }
+  .idle-veh-head span:nth-child(3) { flex: 1; }
+  .idle-veh-head span:nth-child(4) { width: 90px; flex: 0 0 90px; text-align: right; }
+  .idle-veh-row { display: flex; gap: 12px; font-size: 12px; color: #333; padding: 6px 0; border-bottom: 1px solid #f0f0f0; align-items: center; }
   .idle-veh-row:last-child { border-bottom: none; }
-  .idle-veh-no { width: 150px; flex: 0 0 150px; font-weight: 600; line-height: 1.4; }
-  .idle-veh-model { font-size: 10.5px; color: #999; font-weight: 500; margin-top: 1px; }
-  .idle-veh-spot { flex: 1; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; align-self: center; }
-  .idle-veh-date { width: 90px; flex: 0 0 90px; text-align: right; color: #888; align-self: center; }
+  .idle-veh-no { width: 100px; flex: 0 0 100px; font-weight: 600; }
+  .idle-veh-model { width: 150px; flex: 0 0 150px; font-size: 12px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .idle-veh-spot { flex: 1; color: #555; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .idle-veh-date { width: 90px; flex: 0 0 90px; text-align: right; color: #888; }
   .idle-veh-empty { font-size: 12px; color: #999; padding: 8px 0; }
   .idle-hint {
     font-size: 12px; color: #8a5a10; background: #fdf3e3; border: 1px solid #f0d9a8;
@@ -2276,7 +2277,8 @@
       const vehList = (row.제휴사별[e.name].미가동차량목록 || []);
       const vehRowsHtml = vehList.length ? vehList.map(v => `
           <div class="idle-veh-row">
-            <span class="idle-veh-no">${v.차량번호}${v.차종명 ? `<div class="idle-veh-model">${v.차종명}</div>` : ''}</span>
+            <span class="idle-veh-no">${v.차량번호}</span>
+            <span class="idle-veh-model">${v.차종명 || '—'}</span>
             <span class="idle-veh-spot">${v.마지막이용스팟 || '—'}</span>
             <span class="idle-veh-date">${v.마지막이용일 || '—'}</span>
           </div>`).join('') : '<div class="idle-veh-empty">차량별 상세 데이터가 없습니다.</div>';
@@ -2292,7 +2294,7 @@
         </div>
         <div class="idle-veh-panel" id="idleVehPanel-${idx}">
           <div class="idle-veh-head">
-            <span>차량번호</span><span>마지막 이용 스팟</span><span>마지막 이용일</span>
+            <span>차량번호</span><span>차종</span><span>마지막 이용 스팟</span><span>마지막 이용일</span>
           </div>
           ${vehRowsHtml}
         </div>
