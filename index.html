@@ -81,6 +81,8 @@
   }
   @media (max-width: 1100px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-grid-4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 900px) { .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
     background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 17px 18px;
   }
@@ -336,6 +338,17 @@
       <div class="page-eyebrow">PARTNER (차량소속) STATUS</div>
       <h1>🤝 제휴사별 현황</h1>
       <div class="sub">차량소속(제휴사) 기준 건수·매출·차량수 현황입니다. 주 선택은 '주간 실적' 페이지의 선택을 따릅니다.</div>
+      <div class="section">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>📊 <span id="partnerKpiTitleName">제휴사</span> 주간 스냅샷</span>
+          <div class="alert-period-bar">
+            <button type="button" id="partnerKpiPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
+            <select id="partnerKpiWeekSelect"></select>
+            <button type="button" id="partnerKpiNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
+          </div>
+        </h2>
+        <div class="kpi-grid kpi-grid-4" id="partnerKpiGrid"></div>
+      </div>
       <div class="section">
         <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <span>💰 제휴사별 대당매출</span>
@@ -1957,6 +1970,66 @@
   // 제휴사별 대당매출 연도비교 트렌드 (page3 전용, 선택 주와 무관하게 전체 이력 기준)
   let selectedPartnerTrend = null;
   let excludeDriveRevenue = false;
+  let selectedPartnerKpiWeek = null;
+
+  function partnerMetrics(row, name){
+    if (!row || !row.제휴사별 || !name) return null;
+    const p = row.제휴사별[name];
+    if (!p || !p.차량수) return null;
+    const revExDrive = p.매출 - (p.주행매출||0);
+    return {
+      차량수: p.차량수,
+      이용건수: p.건수,
+      대당매출: Math.round(p.매출/p.차량수),
+      대당매출_주행제외: Math.round(revExDrive/p.차량수),
+    };
+  }
+
+  function renderPartnerKpiWeekSelect(){
+    const sel = document.getElementById('partnerKpiWeekSelect');
+    if (!sel) return;
+    if (!selectedPartnerKpiWeek || !DATA_MAP[selectedPartnerKpiWeek]) selectedPartnerKpiWeek = MAX_WEEK;
+    sel.innerHTML = ALL_WEEKS.slice().reverse().map(w => {
+      const r = DATA_MAP[w];
+      return `<option value="${w}" ${w===selectedPartnerKpiWeek ? 'selected' : ''}>${w} ~ ${r.주종료일}</option>`;
+    }).join('');
+  }
+
+  function renderPartnerKpiSnapshot(){
+    const grid = document.getElementById('partnerKpiGrid');
+    const titleName = document.getElementById('partnerKpiTitleName');
+    if (!grid) return;
+    if (titleName) titleName.textContent = selectedPartnerTrend || '제휴사';
+    if (!selectedPartnerKpiWeek || !DATA_MAP[selectedPartnerKpiWeek]) selectedPartnerKpiWeek = MAX_WEEK;
+    const row = DATA_MAP[selectedPartnerKpiWeek];
+    if (!selectedPartnerTrend || !row){
+      grid.innerHTML = '<div class="empty" style="padding:12px; grid-column:1 / -1;">데이터가 없습니다.</div>';
+      return;
+    }
+    const cur = partnerMetrics(row, selectedPartnerTrend);
+    if (!cur){
+      grid.innerHTML = '<div class="empty" style="padding:12px; grid-column:1 / -1;">이 주에는 해당 제휴사 데이터가 없습니다.</div>';
+      return;
+    }
+    const prevWeek = findPrevWeek(selectedPartnerKpiWeek);
+    const yoyWeek = findYoYWeek(selectedPartnerKpiWeek);
+    const prevM = prevWeek ? partnerMetrics(prevWeek.row, selectedPartnerTrend) : null;
+    const yoyM = yoyWeek ? partnerMetrics(yoyWeek.row, selectedPartnerTrend) : null;
+
+    const metrics = [
+      { key:'차량수', label:'차량수', unit:'대', dec:0 },
+      { key:'이용건수', label:'이용건수', unit:'건', dec:0 },
+      { key:'대당매출', label:'대당매출', unit:'원', dec:0 },
+      { key:'대당매출_주행제외', label:'대당매출(주행제외)', unit:'원', dec:0 },
+    ];
+    grid.innerHTML = metrics.map(m => `
+      <div class="kpi-card">
+        <div class="kpi-label">${m.label}</div>
+        <div class="kpi-value">${fmtNum(cur[m.key], m.dec)} <span style="font-size:12px;color:#999;font-weight:500;">${m.unit}</span></div>
+        <div class="kpi-comp"><span>전주</span>${deltaSpan(cur[m.key], prevM ? prevM[m.key] : null)}</div>
+        <div class="kpi-comp"><span>전년동기</span>${deltaSpan(cur[m.key], yoyM ? yoyM[m.key] : null)}</div>
+      </div>`).join('');
+  }
 
   function allPartnerNames(){
     const set = new Set();
@@ -1998,6 +2071,7 @@
           input.value = selectedPartnerTrend;
           list.classList.remove('open');
           renderPartnerRevTrend();
+          renderPartnerKpiSnapshot();
         });
       });
     }
@@ -2141,6 +2215,28 @@
     });
   }
 
+  const partnerKpiWeekSelectEl = document.getElementById('partnerKpiWeekSelect');
+  if (partnerKpiWeekSelectEl){
+    partnerKpiWeekSelectEl.addEventListener('change', () => {
+      selectedPartnerKpiWeek = partnerKpiWeekSelectEl.value;
+      renderPartnerKpiSnapshot();
+    });
+  }
+  const partnerKpiPrevBtnEl = document.getElementById('partnerKpiPrevBtn');
+  if (partnerKpiPrevBtnEl){
+    partnerKpiPrevBtnEl.addEventListener('click', () => {
+      const idx = ALL_WEEKS.indexOf(selectedPartnerKpiWeek);
+      if (idx > 0){ selectedPartnerKpiWeek = ALL_WEEKS[idx-1]; renderPartnerKpiWeekSelect(); renderPartnerKpiSnapshot(); }
+    });
+  }
+  const partnerKpiNextBtnEl = document.getElementById('partnerKpiNextBtn');
+  if (partnerKpiNextBtnEl){
+    partnerKpiNextBtnEl.addEventListener('click', () => {
+      const idx = ALL_WEEKS.indexOf(selectedPartnerKpiWeek);
+      if (idx >= 0 && idx < ALL_WEEKS.length-1){ selectedPartnerKpiWeek = ALL_WEEKS[idx+1]; renderPartnerKpiWeekSelect(); renderPartnerKpiSnapshot(); }
+    });
+  }
+
   // 전년대비 대당매출 감소 제휴사 알림 카드 (page3) — 기준 주는 이 카드 전용 기간설정으로 독립 선택.
   let selectedAlertWeek = null;
 
@@ -2203,6 +2299,7 @@
         const input = document.getElementById('partnerFilterInput');
         if (input) input.value = selectedPartnerTrend;
         renderPartnerRevTrend();
+        renderPartnerKpiSnapshot();
         const chartEl = document.getElementById('chartPartnerRevTrend');
         if (chartEl) chartEl.scrollIntoView({behavior:'smooth', block:'center'});
       });
@@ -2609,6 +2706,8 @@
   renderPartnerFilterBar();
   renderPartnerGranularityBar();
   renderPartnerRevTrend();
+  renderPartnerKpiWeekSelect();
+  renderPartnerKpiSnapshot();
   renderPartnerAlertWeekSelect();
   renderPartnerAlert();
   renderIdleWeekSelect();
