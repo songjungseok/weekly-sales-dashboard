@@ -195,6 +195,7 @@
         <button class="tab-btn" data-tab="distance">주행거리 구간</button>
         <button class="tab-btn" data-tab="avgduration">건당 평균이용시간</button>
         <button class="tab-btn" data-tab="revperhour">시간당매출</button>
+        <button class="tab-btn" data-tab="utilization">가동률</button>
       </div>
     </div>
     <div id="trendTabBarExtra" style="flex:1; min-width:0;"></div>
@@ -237,6 +238,7 @@
   <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-revperhour" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="revPerHourMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerHour"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-utilization" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : % (가동시간 ÷ 차량운행시간, 차량운행시간 = 차량수 × 일수 × 24h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendUtilization"></canvas></div></div></div>
 </div>
 
 <div class="toolbar">
@@ -1176,7 +1178,7 @@
       return posFromEnd === 0 ? [] : (patterns[posFromEnd - 1] || [1,1]);
     }
 
-    ['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
+    ['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate','chartTrendUtilization'].forEach(id => { if (charts[id]) { charts[id].destroy(); delete charts[id]; } });
 
     const yearRowsMap = {};
     years.forEach(y => { yearRowsMap[y] = yearRows(y); });
@@ -1363,6 +1365,34 @@
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
           scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
+        }
+      });
+    }
+
+    // 가동률 트렌드 = 가동시간(총이용시간, 예약시작일 기준) ÷ 차량운행시간(차량수 × 일수 × 24h) (주 단위 합계 기준 비율, 개별 차량 평균이 아님)
+    function getUtilizationRate(row){
+      if (!row || row.차량수 == null || !row.총이용시간) return null;
+      const days = row.일수 || 7;
+      const opHours = row.차량수 * days * 24;
+      if (!opHours) return null;
+      return Math.round((row.총이용시간 / opHours) * 1000) / 10;
+    }
+    const elUtilization = document.getElementById('chartTrendUtilization');
+    if (elUtilization){
+      const datasets = years.map((y,i) => ({
+        label: `${y}년`, data: yearRowsMap[y].map(r => getUtilizationRate(r)),
+        borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+        borderDash: dashForIndex(i, years.length),
+        fill:false, tension:0.15, spanGaps:true, pointRadius:2
+      }));
+      charts['chartTrendUtilization'] = new Chart(elUtilization.getContext('2d'), {
+        type: 'line',
+        data: { labels: displayLabels, datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}%` } } },
+          scales: { y: { beginAtZero:true, ticks:{font:{size:10}, callback:(v)=>v+'%'} }, x: { ticks:{font:{size:9}, maxRotation:60, minRotation:45} } }
         }
       });
     }
@@ -1763,7 +1793,7 @@
     const content = document.getElementById('content')
     const content2 = document.getElementById('content2');
     const badges = document.getElementById('badges');
-    destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate']);
+    destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate','chartTrendUtilization']);
 
     document.getElementById('subhead').textContent =
       `데이터 보유 기간: ${MIN_WEEK} ~ ${MAX_WEEK} (총 ${ALL_WEEKS.length}주)  ·  주간 실적 기준 (월~일 7일 합산)`;
@@ -1999,6 +2029,7 @@
       document.getElementById('trendTabBox-convrate').style.display = (tab === 'convrate') ? '' : 'none';
       document.getElementById('trendTabBox-firstuse').style.display = (tab === 'firstuse') ? '' : 'none';
       document.getElementById('trendTabBox-reuserate').style.display = (tab === 'reuserate') ? '' : 'none';
+      document.getElementById('trendTabBox-utilization').style.display = (tab === 'utilization') ? '' : 'none';
       if (charts['chartTrendVehCount']) charts['chartTrendVehCount'].resize();
       if (charts['chartTrendRevPerCar']) charts['chartTrendRevPerCar'].resize();
       if (charts['chartTrendDuration']) charts['chartTrendDuration'].resize();
@@ -2008,6 +2039,7 @@
       if (charts['chartTrendConvRate']) charts['chartTrendConvRate'].resize();
       if (charts['chartTrendFirstUse']) charts['chartTrendFirstUse'].resize();
       if (charts['chartTrendReuseRate']) charts['chartTrendReuseRate'].resize();
+      if (charts['chartTrendUtilization']) charts['chartTrendUtilization'].resize();
     });
   }
 
