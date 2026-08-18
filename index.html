@@ -441,6 +441,19 @@
           <div id="idleList"></div>
         </div>
       </div>
+
+      <div class="section">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>🏆 제휴사별 대당매출</span>
+          <div class="alert-period-bar">
+            <button type="button" id="partnerBarPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
+            <select id="partnerBarWeekSelect"></select>
+            <button type="button" id="partnerBarNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
+          </div>
+        </h2>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">단위 : 원 (점선 = 전체 평균, 평균 미달 제휴사는 빨간 막대)</div>
+        <div class="chart-box" style="height:440px;"><canvas id="chartPartnerRevBar"></canvas></div>
+      </div>
     </div>
 
   </div>
@@ -1994,6 +2007,77 @@
     return Math.round(rev / row.차량수);
   }
 
+  // 제휴사별 대당매출 막대그래프 (내림차순, 전체 평균 미달 시 빨간 막대) — page3 최하단
+  let selectedPartnerBarWeek = null;
+
+  function renderPartnerBarWeekSelect(){
+    const sel = document.getElementById('partnerBarWeekSelect');
+    if (!sel) return;
+    if (!selectedPartnerBarWeek || !DATA_MAP[selectedPartnerBarWeek]) selectedPartnerBarWeek = MAX_WEEK;
+    sel.innerHTML = ALL_WEEKS.slice().reverse().map(w => {
+      const r = DATA_MAP[w];
+      return `<option value="${w}" ${w===selectedPartnerBarWeek ? 'selected' : ''}>${w} ~ ${r.주종료일}</option>`;
+    }).join('');
+  }
+
+  function renderPartnerRevBarChart(){
+    const el = document.getElementById('chartPartnerRevBar');
+    if (!el) return;
+    if (charts['chartPartnerRevBar']) { charts['chartPartnerRevBar'].destroy(); }
+    if (!selectedPartnerBarWeek || !DATA_MAP[selectedPartnerBarWeek]) selectedPartnerBarWeek = MAX_WEEK;
+    const row = DATA_MAP[selectedPartnerBarWeek];
+    if (!row || !row.제휴사별) return;
+    const entries = Object.keys(row.제휴사별).map(name => {
+      const m = partnerMetrics(row, name);
+      return m ? { name, val: m.대당매출 } : null;
+    }).filter(Boolean).sort((a, b) => b.val - a.val);
+    if (!entries.length) return;
+    const overall = overallRevPerCar(row, false);
+    const labels = entries.map(e => e.name);
+    const data = entries.map(e => e.val);
+    const colors = entries.map(e => (overall != null && e.val < overall) ? '#d0342c' : '#1B2A4A');
+    charts['chartPartnerRevBar'] = new Chart(el.getContext('2d'), {
+      data: {
+        labels,
+        datasets: [
+          { type: 'bar', label: '대당매출', data, backgroundColor: colors, order: 2 },
+          { type: 'line', label: '전체 평균', data: labels.map(() => overall), borderColor: '#e9a23b',
+            borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'top', labels: { boxWidth: 8, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } } } },
+        scales: {
+          x: { ticks: { autoSkip: false, maxRotation: 70, minRotation: 40, font: { size: 10 } } },
+          y: { beginAtZero: true, ticks: { callback: v => v.toLocaleString('ko-KR') } }
+        }
+      }
+    });
+  }
+
+  const partnerBarWeekSelectEl = document.getElementById('partnerBarWeekSelect');
+  if (partnerBarWeekSelectEl){
+    partnerBarWeekSelectEl.addEventListener('change', () => {
+      selectedPartnerBarWeek = partnerBarWeekSelectEl.value;
+      renderPartnerRevBarChart();
+    });
+  }
+  const partnerBarPrevBtnEl = document.getElementById('partnerBarPrevBtn');
+  if (partnerBarPrevBtnEl){
+    partnerBarPrevBtnEl.addEventListener('click', () => {
+      const idx = ALL_WEEKS.indexOf(selectedPartnerBarWeek);
+      if (idx > 0){ selectedPartnerBarWeek = ALL_WEEKS[idx-1]; renderPartnerBarWeekSelect(); renderPartnerRevBarChart(); }
+    });
+  }
+  const partnerBarNextBtnEl = document.getElementById('partnerBarNextBtn');
+  if (partnerBarNextBtnEl){
+    partnerBarNextBtnEl.addEventListener('click', () => {
+      const idx = ALL_WEEKS.indexOf(selectedPartnerBarWeek);
+      if (idx >= 0 && idx < ALL_WEEKS.length-1){ selectedPartnerBarWeek = ALL_WEEKS[idx+1]; renderPartnerBarWeekSelect(); renderPartnerRevBarChart(); }
+    });
+  }
+
   function renderPartnerKpiWeekSelect(){
     const sel = document.getElementById('partnerKpiWeekSelect');
     if (!sel) return;
@@ -2722,11 +2806,14 @@
   renderPartnerAlert();
   renderIdleWeekSelect();
   renderIdleAlert();
+  renderPartnerBarWeekSelect();
+  renderPartnerRevBarChart();
   // page3(제휴사별 현황)는 초기 로드 시 display:none 상태라 Chart.js가 0 크기로 그려지는 문제가 있다.
   // resize()만으로는 완전히 복구되지 않는 경우가 있어, 사이드바에서 page3으로 전환될 때
   // 아래 함수로 page3의 차트를 처음부터 다시 그리도록(재생성) 전역에 노출한다.
   window.refreshPage3Charts = function(){
     renderPartnerRevTrend();
+    renderPartnerRevBarChart();
   };
   const saved = localStorage.getItem('wsr_last_week');
   const initial = (saved && DATA_MAP[saved]) ? saved : MAX_WEEK;
