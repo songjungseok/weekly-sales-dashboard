@@ -133,7 +133,20 @@
   .partner-search-item:hover, .partner-search-item.active { background: #eef2f6; }
   .partner-search-item.selected { background: #1a2b3c; color: #fff; font-weight: 700; }
   .partner-search-empty { padding: 8px 14px; font-size: 12.5px; color: #999; }
-  .alert-card { background: #fff; }
+  .alert-card { background: #fff; position: relative; }
+  .def-toggle-btn {
+    font-size: 10.5px; font-weight: 700; color: #fff; background: #1c2733; border: 1px solid #1c2733;
+    border-radius: 0; padding: 3px 9px; cursor: pointer; box-shadow: 0 2px 6px rgba(28,39,51,0.35); font-family: inherit;
+  }
+  .def-box {
+    display: none; position: absolute; top: 44px; right: 20px; z-index: 30; width: 300px;
+    max-width: calc(100% - 40px); background: #12202c; color: #f2f6f9; border: 1px solid #2dd4bf;
+    border-radius: 0; padding: 14px 16px; box-shadow: 0 10px 28px rgba(0,0,0,0.4); font-size: 12.5px; line-height: 1.6;
+  }
+  .def-box.open { display: block; }
+  .def-box-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .def-box-close { cursor: pointer; color: #9aa7b4; font-size: 14px; line-height: 1; padding: 2px 4px; }
+  .def-box-label { color: #2dd4bf; font-weight: 800; font-size: 11.5px; letter-spacing: 0.4px; margin-bottom: 4px; }
   .alert-eyebrow { font-size: 10.5px; letter-spacing: 0.6px; color: #9aa4ad; font-weight: 700; text-transform: uppercase; }
   .alert-title { font-size: 15px; font-weight: 700; color: #1a2b3c; margin-top: 3px; }
   .alert-count { font-size: 22px; font-weight: 800; color: #d0342c; line-height: 1; }
@@ -343,7 +356,10 @@
           <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
             <div>
               <div class="alert-eyebrow">IDLE VEHICLE ALERT</div>
-              <div class="alert-title">🚫 한번도 운행되지 않은 차량이 있어요</div>
+              <div class="alert-title" style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span>🚫 한번도 운행되지 않은 차량이 있어요</span>
+                <button type="button" id="idleDefToggleBtn" class="def-toggle-btn">ⓘ 기준보기</button>
+              </div>
             </div>
             <div style="display:flex; align-items:center; gap:14px;">
               <div class="alert-period-bar">
@@ -352,6 +368,30 @@
                 <button type="button" id="idleNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
               </div>
               <div class="alert-count" id="idleCount" style="color:#c9791a;">—</div>
+            </div>
+          </div>
+          <div id="idleDefBox" class="def-box">
+            <div class="def-box-head">
+              <b style="font-size:13px; letter-spacing:0.3px;">미가동차량 정의</b>
+              <span id="idleDefCloseBtn" class="def-box-close">✕</span>
+            </div>
+            <div style="margin-bottom:10px;">
+              <div class="def-box-label">공식</div>
+              <div>총 차량수 − 이번 주 가동 차량수</div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <div class="def-box-label">총 차량수</div>
+              <div>선택한 주의 마지막 날(일요일) 기준, 최근 30일 동안 한 번이라도 운행 이력이 있는 차량 수</div>
+            </div>
+            <div style="margin-bottom:10px;">
+              <div class="def-box-label">이번 주 가동 차량수</div>
+              <div>선택한 주(월~일 7일) 동안 실제로 운행 이력이 있는 차량 수</div>
+            </div>
+            <div>
+              <div class="def-box-label">예시</div>
+              <div style="margin-bottom:4px;">최근 30일 차량수 <b>50대</b> 中</div>
+              <div style="margin-bottom:4px;">이번 주 가동 차량 <b>42대</b></div>
+              <div>= 미가동 차량 <b style="color:#f0a35c; font-size:13px;">8대</b></div>
             </div>
           </div>
           <div id="idleList"></div>
@@ -2241,6 +2281,22 @@
     idleNextBtnEl.addEventListener('click', () => {
       const idx = ALL_WEEKS.indexOf(selectedIdleWeek);
       if (idx >= 0 && idx < ALL_WEEKS.length-1){ selectedIdleWeek = ALL_WEEKS[idx+1]; renderIdleWeekSelect(); renderIdleAlert(); }
+    });
+  }
+  const idleDefToggleBtnEl = document.getElementById('idleDefToggleBtn');
+  const idleDefBoxEl = document.getElementById('idleDefBox');
+  if (idleDefToggleBtnEl && idleDefBoxEl){
+    idleDefToggleBtnEl.addEventListener('click', () => {
+      const show = !idleDefBoxEl.classList.contains('open');
+      idleDefBoxEl.classList.toggle('open', show);
+      idleDefToggleBtnEl.textContent = show ? '✕ 닫기' : 'ⓘ 기준보기';
+    });
+  }
+  const idleDefCloseBtnEl = document.getElementById('idleDefCloseBtn');
+  if (idleDefCloseBtnEl){
+    idleDefCloseBtnEl.addEventListener('click', () => {
+      idleDefBoxEl.classList.remove('open');
+      idleDefToggleBtnEl.textContent = 'ⓘ 기준보기';
     });
   }
 
