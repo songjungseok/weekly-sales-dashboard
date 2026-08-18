@@ -317,6 +317,9 @@
       document.querySelectorAll('.page-content').forEach(function(p){ p.classList.remove('active'); });
       item.classList.add('active');
       document.getElementById(item.dataset.page).classList.add('active');
+      if (item.dataset.page === 'page3' && typeof window.resizePartnerCharts === 'function'){
+        setTimeout(window.resizePartnerCharts, 0);
+      }
     });
   });
 </script>
@@ -2306,6 +2309,12 @@
   renderTrend();
   renderPartnerFilterBar();
   renderPartnerRevTrend();
+  // page3(제휴사별 현황)는 초기 로드 시 display:none 상태라 Chart.js가 0 크기로 그려지는 문제가 있어,
+  // 사이드바에서 page3으로 전환될 때 아래 함수를 통해 강제로 resize 하도록 전역에 노출.
+  window.resizePartnerCharts = function(){
+    if (charts['chartPartnerRevTrend']) charts['chartPartnerRevTrend'].resize();
+    if (charts['chartPartner']) charts['chartPartner'].resize();
+  };
   const saved = localStorage.getItem('wsr_last_week');
   const initial = (saved && DATA_MAP[saved]) ? saved : MAX_WEEK;
   goWeek(initial);
