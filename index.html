@@ -399,7 +399,6 @@
           <div id="idleList"></div>
         </div>
       </div>
-      <div id="content3"></div>
     </div>
 
   </div>
@@ -1209,13 +1208,6 @@
 
   // 항목이 너무 많을 때(차량유형, 지역 등) 라벨 가독성을 위해
   // 건수 기준 상위 N개 + 비교시점 대비 변화율(|%|) 기준 상위 M개(상위 N에 없는 항목 중)를 합쳐 반환한다.
-  // 대당(차량 1대당) 정규화 헬퍼 — 전역 스코프(render() 내부에도 동일 로직의 지역 함수가 있으나,
-  // buildPage3Content()처럼 render() 밖에서도 재사용하기 위해 여기 전역으로도 둔다.
-  function perVeh(v, vehCount){
-    if (v==null || vehCount==null || !vehCount) return null;
-    return Math.round((v/vehCount)*1000)/1000;
-  }
-
   function topByCountAndChange(curMap, compMap, n, m){
     const sorted = Object.entries(curMap).sort((a,b)=>b[1]-a[1]);
     const topLabels = sorted.slice(0, n).map(e=>e[0]);
@@ -1671,7 +1663,6 @@
     }
   }
   let couponTableRow = null, couponTablePrevWeek = null;
-  let partnerTableRow = null, partnerTablePrevWeek = null, partnerTableYoyWeek = null;
   const COUPON_DUR_BUCKETS = ['4시간 이하','4시간~24시간 이하','24시간 초과'];
   const COUPON_DUR_LABELS = {'4시간 이하':'4시간미만', '4시간~24시간 이하':'4-24시간미만', '24시간 초과':'24시간초과'};
   let selectedCouponDurs = COUPON_DUR_BUCKETS.slice();
@@ -1936,55 +1927,6 @@
       </div>`;
   }
 
-  function renderPartnerTable(){
-    const row = partnerTableRow, prevWeek = partnerTablePrevWeek, yoyWeek = partnerTableYoyWeek;
-    const wrap = document.getElementById('partnerTableWrap');
-    if (!row || !wrap) return;
-    const partnerMap = row.제휴사별 || {};
-    const prevMap = prevWeek ? (prevWeek.row.제휴사별 || {}) : {};
-    const yoyMap = yoyWeek ? (yoyWeek.row.제휴사별 || {}) : {};
-    let entries = Object.entries(partnerMap).map(([name, v]) => ({
-      name, cnt: v.건수||0, amt: v.매출||0, veh: v.차량수||0,
-    }));
-    entries.sort((a,b) => b.cnt - a.cnt);
-    if (!entries.length){
-      wrap.innerHTML = '<div class="empty" style="padding:12px;">이번 주는 제휴사별 데이터가 없습니다.</div>';
-      return;
-    }
-    const rowsHtml = entries.map((e, i) => {
-      const prevCnt = prevMap[e.name] ? prevMap[e.name].건수 : null;
-      const yoyCnt = yoyMap[e.name] ? yoyMap[e.name].건수 : null;
-      const perCase = e.veh ? Math.round((e.cnt/e.veh)*100)/100 : null;
-      const revPerVeh = e.veh ? Math.round(e.amt/e.veh) : null;
-      return `
-        <tr>
-          <td>${i+1}</td>
-          <td>${e.name}</td>
-          <td>${e.cnt.toLocaleString('ko-KR')}건</td>
-          <td class="muted">${prevCnt!=null ? prevCnt.toLocaleString('ko-KR')+'건' : '—'}</td>
-          <td>${prevWeek ? deltaSpan(e.cnt, prevCnt) : '—'}</td>
-          <td class="muted">${yoyCnt!=null ? yoyCnt.toLocaleString('ko-KR')+'건' : '—'}</td>
-          <td>${yoyWeek ? deltaSpan(e.cnt, yoyCnt) : '—'}</td>
-          <td class="muted">${fmtNum(e.amt,0)}원</td>
-          <td class="muted">${e.veh.toLocaleString('ko-KR')}대</td>
-          <td class="muted">${perCase!=null ? perCase.toFixed(2)+'건' : '—'}</td>
-          <td class="muted">${revPerVeh!=null ? fmtNum(revPerVeh,0)+'원' : '—'}</td>
-        </tr>`;
-    }).join('');
-
-    wrap.innerHTML = `
-      <div class="coupon-table-wrap">
-        <table class="coupon-table">
-          <thead>
-            <tr>
-              <th>순위</th><th>제휴사명</th><th>이번 주</th><th>전주</th><th>전주대비</th><th>전년동기</th><th>전년동기대비</th><th>매출</th><th>차량수</th><th>대당건수</th><th>대당매출</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </div>`;
-  }
-
   // 제휴사별 대당매출 연도비교 트렌드 (page3 전용, 선택 주와 무관하게 전체 이력 기준)
   let selectedPartnerTrend = null;
   let excludeDriveRevenue = false;
@@ -1996,44 +1938,6 @@
       if (row && row.제휴사별) Object.keys(row.제휴사별).forEach(k => set.add(k));
     });
     return [...set].sort((a,b) => a.localeCompare(b, 'ko'));
-  }
-
-  // page3(제휴사별 현황) 콘텐츠 빌더 — render()와 사이드바 탭 전환 양쪽에서 재사용.
-  // 탭이 숨겨진 상태(display:none)에서 차트를 최초 생성하면 Chart.js가 0 크기로 그려버리는 문제가 있어,
-  // 사이드바에서 page3으로 전환될 때도 이 함수를 다시 호출해 캔버스를 처음부터 새로 그린다(resize()만으로는 불안정).
-  function buildPage3Content(row, prevWeek, yoyWeek){
-    const content3 = document.getElementById('content3');
-    if (!content3) return;
-    content3.innerHTML = `
-      <div class="section">
-        <h2>🤝 제휴사별 대당 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
-        <div class="chart-box tall"><canvas id="chartPartner"></canvas></div>
-      </div>
-      <div class="section">
-        <h2>📋 제휴사별 현황 전체 (건수 기준 정렬)</h2>
-        <div id="partnerTableWrap"></div>
-      </div>`;
-    if (row.제휴사별){
-      const curPartnerMap = Object.fromEntries(Object.entries(row.제휴사별).map(([k,v])=>[k,v.건수]));
-      const compPartnerWeek = yoyWeek || prevWeek;
-      const compPartnerMap = (compPartnerWeek && compPartnerWeek.row.제휴사별) ? Object.fromEntries(Object.entries(compPartnerWeek.row.제휴사별).map(([k,v])=>[k,v.건수])) : null;
-      const partnerLabels = topByCountAndChange(curPartnerMap, compPartnerMap, 5, 3);
-      const partnerDatasets = [];
-      if (yoyWeek && yoyWeek.row.제휴사별){
-        const yoyPartnerObj = yoyWeek.row.제휴사별;
-        partnerDatasets.push({ label: '전년동기', data: partnerLabels.map(l=>perVeh((yoyPartnerObj[l]||{}).건수||0, (yoyPartnerObj[l]||{}).차량수)), backgroundColor: COLORS[1] });
-      }
-      const curPartnerObj = row.제휴사별;
-      partnerDatasets.push({ label: '이번 주', data: partnerLabels.map(l=>perVeh((curPartnerObj[l]||{}).건수||0, (curPartnerObj[l]||{}).차량수)), backgroundColor: COLORS[0] });
-      barChart('chartPartner', partnerLabels, partnerDatasets, { indexAxis: 'y' });
-    } else {
-      const el = document.getElementById('chartPartner');
-      if (el) el.parentElement.innerHTML = '<div class="empty" style="padding:12px;">이번 주는 제휴사별 데이터가 없습니다.</div>';
-    }
-    partnerTableRow = row;
-    partnerTablePrevWeek = prevWeek;
-    partnerTableYoyWeek = yoyWeek;
-    renderPartnerTable();
   }
 
   function renderPartnerFilterBar(){
@@ -2353,7 +2257,6 @@
     const row = DATA_MAP[weekStart];
     const content = document.getElementById('content')
     const content2 = document.getElementById('content2');
-    const content3 = document.getElementById('content3');
     const badges = document.getElementById('badges');
     destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendReuseRate','chartTrendUtilization']);
 
@@ -2535,9 +2438,6 @@
     renderCouponVtypeFilter();
     renderCouponTable();
 
-    // 제휴사별(차량소속) 현황 — page3. 데이터가 있는 주에서만 차트/표를 채움 (2026-08-10 주부터 신규 추가된 필드).
-    buildPage3Content(row, prevWeek, yoyWeek);
-
     document.getElementById('footNote').textContent =
       `이 대시보드는 대여내역 원본 데이터를 기반으로 매주 월요일 자동 갱신됩니다. 최근 데이터는 미반납 차량 보정 예측치가 포함될 수 있습니다.`;
 
@@ -2620,11 +2520,6 @@
   // resize()만으로는 완전히 복구되지 않는 경우가 있어, 사이드바에서 page3으로 전환될 때
   // 아래 함수로 page3의 차트를 처음부터 다시 그리도록(재생성) 전역에 노출한다.
   window.refreshPage3Charts = function(){
-    const weekStart = select.value;
-    const row = DATA_MAP[weekStart];
-    if (row){
-      buildPage3Content(row, findPrevWeek(weekStart), findYoYWeek(weekStart));
-    }
     renderPartnerRevTrend();
   };
   const saved = localStorage.getItem('wsr_last_week');
