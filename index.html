@@ -444,7 +444,34 @@
 
       <div class="section">
         <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-          <span>🏆 제휴사별 대당매출</span>
+          <span style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <span>🏆 제휴사별 대당매출</span>
+            <span style="position:relative; display:inline-block;">
+              <button type="button" id="partnerBarDefToggleBtn" class="def-toggle-btn">ⓘ 목표정의</button>
+              <div id="partnerBarDefBox" class="def-box">
+                <div class="def-box-head">
+                  <b style="font-size:13px; letter-spacing:0.3px;">목표 대당매출 기준</b>
+                  <span id="partnerBarDefCloseBtn" class="def-box-close">✕</span>
+                </div>
+                <div style="margin-bottom:10px;">
+                  <div class="def-box-label">목표</div>
+                  <div>경영목표</div>
+                </div>
+                <div style="margin-bottom:10px;">
+                  <div class="def-box-label">기준</div>
+                  <div>왕복전용 + 혼용차량의 카셰어링 목표 대당매출<br>(하이패스 포함 <b>1,116,495원</b>)</div>
+                </div>
+                <div style="margin-bottom:10px;">
+                  <div class="def-box-label">주행매출 포함 목표 (하이패스 제외)</div>
+                  <div>하이패스 비중 5% 가정<br>1,116,495원 × 95% = <b>1,060,670원</b></div>
+                </div>
+                <div>
+                  <div class="def-box-label">주행매출 제외 목표</div>
+                  <div>주행매출 비중 35% 가정<br>1,060,670원 × 65% = <b>689,435원</b></div>
+                </div>
+              </div>
+            </span>
+          </span>
           <span style="display:flex; align-items:center; gap:14px; font-size:12.5px; font-weight:500;">
             <label><input type="checkbox" id="partnerBarExcludeDriveCheckbox"> 주행매출제외</label>
             <div class="alert-period-bar">
@@ -2078,16 +2105,19 @@
       return val != null ? { name, val } : null;
     }).filter(Boolean).sort((a, b) => b.val - a.val);
     if (!entries.length) return;
-    const overall = overallMonthlyRevPerCar(selectedPartnerBarMonth, partnerBarExcludeDrive);
+    // 목표 대당매출: 경영목표 고정값(하이패스 제외, VAT/부가세 제외 기준). 주행매출제외 토글 시 다른 고정값 사용(팝업 '목표정의' 참고).
+    const PARTNER_BAR_TARGET_INCLUDE = 1060670;
+    const PARTNER_BAR_TARGET_EXCLUDE = 689435;
+    const target = partnerBarExcludeDrive ? PARTNER_BAR_TARGET_EXCLUDE : PARTNER_BAR_TARGET_INCLUDE;
     const labels = entries.map(e => e.name);
     const data = entries.map(e => e.val);
-    const colors = entries.map(e => (overall != null && e.val < overall) ? '#d0342c' : '#1B2A4A');
+    const colors = entries.map(e => (e.val < target) ? '#d0342c' : '#1B2A4A');
     charts['chartPartnerRevBar'] = new Chart(el.getContext('2d'), {
       data: {
         labels,
         datasets: [
           { type: 'bar', label: '대당매출', data, backgroundColor: colors, order: 2 },
-          { type: 'line', label: '전체 평균', data: labels.map(() => overall), borderColor: '#e9a23b',
+          { type: 'line', label: '목표', data: labels.map(() => target), borderColor: '#e9a23b',
             borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]
       },
@@ -2104,7 +2134,7 @@
           ctx.fillStyle = '#c9791a';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText('목표매출', lastPoint.x + 6, lastPoint.y);
+          ctx.fillText('목표', lastPoint.x + 6, lastPoint.y);
           ctx.restore();
         }
       }],
@@ -2120,6 +2150,22 @@
     });
   }
 
+  const partnerBarDefToggleBtnEl = document.getElementById('partnerBarDefToggleBtn');
+  const partnerBarDefBoxEl = document.getElementById('partnerBarDefBox');
+  if (partnerBarDefToggleBtnEl && partnerBarDefBoxEl){
+    partnerBarDefToggleBtnEl.addEventListener('click', () => {
+      const show = !partnerBarDefBoxEl.classList.contains('open');
+      partnerBarDefBoxEl.classList.toggle('open', show);
+      partnerBarDefToggleBtnEl.textContent = show ? '✕ 닫기' : 'ⓘ 목표정의';
+    });
+  }
+  const partnerBarDefCloseBtnEl = document.getElementById('partnerBarDefCloseBtn');
+  if (partnerBarDefCloseBtnEl){
+    partnerBarDefCloseBtnEl.addEventListener('click', () => {
+      partnerBarDefBoxEl.classList.remove('open');
+      partnerBarDefToggleBtnEl.textContent = 'ⓘ 목표정의';
+    });
+  }
   const partnerBarExcludeDriveCheckboxEl = document.getElementById('partnerBarExcludeDriveCheckbox');
   if (partnerBarExcludeDriveCheckboxEl){
     partnerBarExcludeDriveCheckboxEl.addEventListener('change', () => {
