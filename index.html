@@ -447,7 +447,7 @@
           <span>🏆 제휴사별 대당매출</span>
           <div class="alert-period-bar">
             <button type="button" id="partnerBarPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
-            <select id="partnerBarWeekSelect"></select>
+            <select id="partnerBarMonthSelect"></select>
             <button type="button" id="partnerBarNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
           </div>
         </h2>
@@ -2007,16 +2007,55 @@
     return Math.round(rev / row.차량수);
   }
 
-  // 제휴사별 대당매출 막대그래프 (내림차순, 전체 평균 미달 시 빨간 막대) — page3 최하단
-  let selectedPartnerBarWeek = null;
+  // 제휴사별 대당매출 막대그래프 (내림차순, 전체 평균 미달 시 빨간 막대) — page3 최하단, 월단위 필터
+  let selectedPartnerBarMonth = null;
 
-  function renderPartnerBarWeekSelect(){
-    const sel = document.getElementById('partnerBarWeekSelect');
+  function partnerBarAvailableMonths(){
+    const set = new Set();
+    ALL_WEEKS.forEach(w => {
+      const d = parseDate(w);
+      set.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+    });
+    return [...set].sort();
+  }
+
+  function partnerMonthlyRevPerCar(monthKey, name){
+    const [y, mo] = monthKey.split('-').map(Number);
+    let sumRev = 0, sumVeh = 0, n = 0;
+    ALL_WEEKS.forEach(w => {
+      const d = parseDate(w);
+      if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
+      const row = DATA_MAP[w];
+      if (!row || !row.제휴사별) return;
+      const p = row.제휴사별[name];
+      if (!p || !p.차량수) return;
+      sumRev += p.매출; sumVeh += p.차량수; n++;
+    });
+    return n ? Math.round(sumRev / (sumVeh / n)) : null;
+  }
+
+  function overallMonthlyRevPerCar(monthKey){
+    const [y, mo] = monthKey.split('-').map(Number);
+    let sumRev = 0, sumVeh = 0, n = 0;
+    ALL_WEEKS.forEach(w => {
+      const d = parseDate(w);
+      if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
+      const row = DATA_MAP[w];
+      if (!row || !row.차량수) return;
+      sumRev += row.총매출; sumVeh += row.차량수; n++;
+    });
+    return n ? Math.round(sumRev / (sumVeh / n)) : null;
+  }
+
+  function renderPartnerBarMonthSelect(){
+    const sel = document.getElementById('partnerBarMonthSelect');
     if (!sel) return;
-    if (!selectedPartnerBarWeek || !DATA_MAP[selectedPartnerBarWeek]) selectedPartnerBarWeek = MAX_WEEK;
-    sel.innerHTML = ALL_WEEKS.slice().reverse().map(w => {
-      const r = DATA_MAP[w];
-      return `<option value="${w}" ${w===selectedPartnerBarWeek ? 'selected' : ''}>${w} ~ ${r.주종료일}</option>`;
+    const months = partnerBarAvailableMonths();
+    if (!months.length) return;
+    if (!selectedPartnerBarMonth || !months.includes(selectedPartnerBarMonth)) selectedPartnerBarMonth = months[months.length-1];
+    sel.innerHTML = months.slice().reverse().map(mk => {
+      const [y, mo] = mk.split('-');
+      return `<option value="${mk}" ${mk===selectedPartnerBarMonth ? 'selected' : ''}>${y}년 ${mo}월</option>`;
     }).join('');
   }
 
@@ -2024,15 +2063,16 @@
     const el = document.getElementById('chartPartnerRevBar');
     if (!el) return;
     if (charts['chartPartnerRevBar']) { charts['chartPartnerRevBar'].destroy(); }
-    if (!selectedPartnerBarWeek || !DATA_MAP[selectedPartnerBarWeek]) selectedPartnerBarWeek = MAX_WEEK;
-    const row = DATA_MAP[selectedPartnerBarWeek];
-    if (!row || !row.제휴사별) return;
-    const entries = Object.keys(row.제휴사별).map(name => {
-      const m = partnerMetrics(row, name);
-      return m ? { name, val: m.대당매출 } : null;
+    const months = partnerBarAvailableMonths();
+    if (!months.length) return;
+    if (!selectedPartnerBarMonth || !months.includes(selectedPartnerBarMonth)) selectedPartnerBarMonth = months[months.length-1];
+    const names = allPartnerNames();
+    const entries = names.map(name => {
+      const val = partnerMonthlyRevPerCar(selectedPartnerBarMonth, name);
+      return val != null ? { name, val } : null;
     }).filter(Boolean).sort((a, b) => b.val - a.val);
     if (!entries.length) return;
-    const overall = overallRevPerCar(row, false);
+    const overall = overallMonthlyRevPerCar(selectedPartnerBarMonth);
     const labels = entries.map(e => e.name);
     const data = entries.map(e => e.val);
     const colors = entries.map(e => (overall != null && e.val < overall) ? '#d0342c' : '#1B2A4A');
@@ -2056,25 +2096,27 @@
     });
   }
 
-  const partnerBarWeekSelectEl = document.getElementById('partnerBarWeekSelect');
-  if (partnerBarWeekSelectEl){
-    partnerBarWeekSelectEl.addEventListener('change', () => {
-      selectedPartnerBarWeek = partnerBarWeekSelectEl.value;
+  const partnerBarMonthSelectEl = document.getElementById('partnerBarMonthSelect');
+  if (partnerBarMonthSelectEl){
+    partnerBarMonthSelectEl.addEventListener('change', () => {
+      selectedPartnerBarMonth = partnerBarMonthSelectEl.value;
       renderPartnerRevBarChart();
     });
   }
   const partnerBarPrevBtnEl = document.getElementById('partnerBarPrevBtn');
   if (partnerBarPrevBtnEl){
     partnerBarPrevBtnEl.addEventListener('click', () => {
-      const idx = ALL_WEEKS.indexOf(selectedPartnerBarWeek);
-      if (idx > 0){ selectedPartnerBarWeek = ALL_WEEKS[idx-1]; renderPartnerBarWeekSelect(); renderPartnerRevBarChart(); }
+      const months = partnerBarAvailableMonths();
+      const idx = months.indexOf(selectedPartnerBarMonth);
+      if (idx > 0){ selectedPartnerBarMonth = months[idx-1]; renderPartnerBarMonthSelect(); renderPartnerRevBarChart(); }
     });
   }
   const partnerBarNextBtnEl = document.getElementById('partnerBarNextBtn');
   if (partnerBarNextBtnEl){
     partnerBarNextBtnEl.addEventListener('click', () => {
-      const idx = ALL_WEEKS.indexOf(selectedPartnerBarWeek);
-      if (idx >= 0 && idx < ALL_WEEKS.length-1){ selectedPartnerBarWeek = ALL_WEEKS[idx+1]; renderPartnerBarWeekSelect(); renderPartnerRevBarChart(); }
+      const months = partnerBarAvailableMonths();
+      const idx = months.indexOf(selectedPartnerBarMonth);
+      if (idx >= 0 && idx < months.length-1){ selectedPartnerBarMonth = months[idx+1]; renderPartnerBarMonthSelect(); renderPartnerRevBarChart(); }
     });
   }
 
@@ -2806,7 +2848,7 @@
   renderPartnerAlert();
   renderIdleWeekSelect();
   renderIdleAlert();
-  renderPartnerBarWeekSelect();
+  renderPartnerBarMonthSelect();
   renderPartnerRevBarChart();
   // page3(제휴사별 현황)는 초기 로드 시 display:none 상태라 Chart.js가 0 크기로 그려지는 문제가 있다.
   // resize()만으로는 완전히 복구되지 않는 경우가 있어, 사이드바에서 page3으로 전환될 때
