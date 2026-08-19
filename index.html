@@ -132,6 +132,8 @@
     border: 1.5px solid #1a2b3c; background: #fff; font-family: inherit; width: 220px;
   }
   .partner-search-input:focus { outline: none; border-color: #2dd4bf; box-shadow: 0 0 0 2px rgba(45,212,191,0.25); }
+  .veh-search-input { width: 120px; padding: 5px 10px; font-size: 12.5px; font-weight: 500; }
+  .veh-search-list { width: 200px; }
   .partner-search-list {
     display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     width: 260px; max-height: 260px; overflow-y: auto; background: #fff;
@@ -534,15 +536,24 @@
               </span>
               <div style="display:flex; align-items:center; gap:6px;">
                 <span style="font-size:12.5px; color:#666;">지역</span>
-                <select id="vehRegionSelect"><option value="">전체</option></select>
+                <span class="partner-search-wrap">
+                  <input type="text" id="vehRegionSearchInput" class="partner-search-input veh-search-input" placeholder="전체" autocomplete="off">
+                  <div id="vehRegionSearchList" class="partner-search-list veh-search-list"></div>
+                </span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
                 <span style="font-size:12.5px; color:#666;">차종</span>
-                <select id="vehCarTypeSelect"><option value="">전체</option></select>
+                <span class="partner-search-wrap">
+                  <input type="text" id="vehCarTypeSearchInput" class="partner-search-input veh-search-input" placeholder="전체" autocomplete="off">
+                  <div id="vehCarTypeSearchList" class="partner-search-list veh-search-list"></div>
+                </span>
               </div>
               <div style="display:flex; align-items:center; gap:6px;">
                 <span style="font-size:12.5px; color:#666;">차량구분</span>
-                <select id="vehVtypeSelect"><option value="">전체</option></select>
+                <span class="partner-search-wrap">
+                  <input type="text" id="vehVtypeSearchInput" class="partner-search-input veh-search-input" placeholder="전체" autocomplete="off">
+                  <div id="vehVtypeSearchList" class="partner-search-list veh-search-list"></div>
+                </span>
               </div>
               <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12.5px; color:#666;">저매출 기준</span>
@@ -3193,6 +3204,7 @@
   let vehTrendGran = 'week';
   let vehTrendMetric = 'rev';
   let vehTrendYears = [];
+  const VEH_TREND_EXCLUDED_YEARS = [2024]; // 매출 트렌드 연도 선택지에서 제외(2024년 데이터가 너무 적어 UI에서 숨김)
   let vehBepTab = 'all';
   let vehBepMinCount = 3;
   let vehCarTypeExpanded = false;
@@ -3253,7 +3265,7 @@
     if (!vehSelectedMonth || !months.includes(vehSelectedMonth)) vehSelectedMonth = months[months.length-1];
     populateYearMonthSelects();
     populateDependentFilters();
-    const allYears = Array.from(new Set(months.map(m=>parseInt(m.slice(0,4),10))));
+    const allYears = Array.from(new Set(months.map(m=>parseInt(m.slice(0,4),10)))).filter(y => !VEH_TREND_EXCLUDED_YEARS.includes(y));
     vehTrendYears = allYears.slice(-3);
     renderTrendYearChecks();
     const lastUpdateEl = document.getElementById('vehLastUpdateText');
@@ -3289,21 +3301,69 @@
     return list.filter(matchesActiveFilters);
   }
 
+  // 지역/차종/차량구분 텍스트 검색 필터 — 각 필터의 옵션 목록과 현재값을 보관(입력창 이벤트는 wireVehSearchSelect에서 한 번만 연결하고,
+  // 여기서는 매달 바뀌는 옵션 목록만 갱신한다 — 이벤트 리스너 중복 등록 방지).
+  const vehFilterState = {
+    region: { options: [], current: '' },
+    carType: { options: [], current: '' },
+    vtype: { options: [], current: '' },
+  };
+
   function populateDependentFilters(){
     const all = vehData.months[vehSelectedMonth] || [];
-    const regions = Array.from(new Set(all.map(v=>v.region).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
-    const carTypes = Array.from(new Set(all.map(v=>v.carType).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
-    const vtypes = Array.from(new Set(all.map(v=>v.vtype).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
-    fillSelect('vehRegionSelect', regions, vehRegionFilter);
-    fillSelect('vehCarTypeSelect', carTypes, vehCarTypeFilter);
-    fillSelect('vehVtypeSelect', vtypes, vehVtypeFilter);
+    vehFilterState.region.options = Array.from(new Set(all.map(v=>v.region).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+    vehFilterState.carType.options = Array.from(new Set(all.map(v=>v.carType).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+    vehFilterState.vtype.options = Array.from(new Set(all.map(v=>v.vtype).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+
+    if (!vehFilterState.region.options.includes(vehRegionFilter)) { vehRegionFilter = ''; }
+    if (!vehFilterState.carType.options.includes(vehCarTypeFilter)) { vehCarTypeFilter = ''; }
+    if (!vehFilterState.vtype.options.includes(vehVtypeFilter)) { vehVtypeFilter = ''; }
+    vehFilterState.region.current = vehRegionFilter;
+    vehFilterState.carType.current = vehCarTypeFilter;
+    vehFilterState.vtype.current = vehVtypeFilter;
+
+    const regionInput = document.getElementById('vehRegionSearchInput');
+    const carTypeInput = document.getElementById('vehCarTypeSearchInput');
+    const vtypeInput = document.getElementById('vehVtypeSearchInput');
+    if (regionInput) regionInput.value = vehRegionFilter;
+    if (carTypeInput) carTypeInput.value = vehCarTypeFilter;
+    if (vtypeInput) vtypeInput.value = vehVtypeFilter;
   }
 
-  function fillSelect(id, options, current){
-    const el = document.getElementById(id);
-    if (!el) return;
-    if (!options.includes(current)) current = '';
-    el.innerHTML = '<option value="">전체</option>' + options.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+  // 지역/차종/차량구분 검색창 하나를 초기화(이벤트 연결은 딱 한 번만 — wireOnce에서 호출)
+  function wireVehSearchSelect(key, inputId, listId, onSelect){
+    const input = document.getElementById(inputId);
+    const list = document.getElementById(listId);
+    if (!input || !list) return;
+
+    function renderList(filterText){
+      const q = (filterText || '').trim().toLowerCase();
+      const state = vehFilterState[key];
+      const matched = q ? state.options.filter(n => n.toLowerCase().includes(q)) : state.options;
+      let itemsHtml = `<div class="partner-search-item${state.current===''?' selected':''}" data-value="">전체</div>`;
+      if (matched.length){
+        itemsHtml += matched.map(n => `<div class="partner-search-item${n===state.current?' selected':''}" data-value="${n}">${n}</div>`).join('');
+      } else if (q) {
+        itemsHtml += '<div class="partner-search-empty">일치하는 항목이 없습니다</div>';
+      }
+      list.innerHTML = itemsHtml;
+      list.querySelectorAll('.partner-search-item').forEach(item => {
+        item.addEventListener('click', () => {
+          const val = item.dataset.value;
+          state.current = val;
+          input.value = val;
+          list.classList.remove('open');
+          onSelect(val);
+        });
+      });
+    }
+
+    input.addEventListener('focus', () => { renderList(''); list.classList.add('open'); });
+    input.addEventListener('input', () => { renderList(input.value); list.classList.add('open'); });
+    input.addEventListener('blur', () => { setTimeout(() => { list.classList.remove('open'); input.value = vehFilterState[key].current; }, 150); });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest(`#${inputId}`) && !e.target.closest(`#${listId}`)) list.classList.remove('open');
+    });
   }
 
   function computeThreshold(vehicles, pct){
@@ -3646,7 +3706,7 @@
   function renderTrendYearChecks(){
     const wrap = document.getElementById('vehTrendYearChecks');
     if (!wrap || !vehData) return;
-    const years = Array.from(new Set(vehData.available.map(m=>parseInt(m.slice(0,4),10)))).sort();
+    const years = Array.from(new Set(vehData.available.map(m=>parseInt(m.slice(0,4),10)))).filter(y => !VEH_TREND_EXCLUDED_YEARS.includes(y)).sort();
     wrap.innerHTML = years.map(y => `<label style="font-size:12px;"><input type="checkbox" class="vehTrendYearChk" value="${y}" ${vehTrendYears.includes(y)?'checked':''}> ${y}년</label>`).join('');
     wrap.querySelectorAll('.vehTrendYearChk').forEach(chk => {
       chk.addEventListener('change', () => {
@@ -3784,23 +3844,21 @@
         renderAll();
       });
     });
-    ['vehRegionSelect','vehCarTypeSelect','vehVtypeSelect'].forEach(id => {
-      document.getElementById(id).addEventListener('change', (e) => {
-        if (id==='vehRegionSelect') vehRegionFilter = e.target.value;
-        if (id==='vehCarTypeSelect') vehCarTypeFilter = e.target.value;
-        if (id==='vehVtypeSelect') vehVtypeFilter = e.target.value;
-        // 지역/차종/차량구분 필터는 주차별 트렌드 데이터에는 반영할 수 없으므로(주 단위 세부 데이터 없음),
-        // 필터가 켜진 상태에서 주차별을 보고 있었다면 자동으로 월별로 전환해 트렌드 그래프에 즉시 반영한다.
-        if ((vehRegionFilter || vehCarTypeFilter || vehVtypeFilter) && vehTrendGran === 'week'){
-          vehTrendGran = 'month';
-          const bar = document.getElementById('vehTrendGranBar');
-          if (bar){
-            bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.gran === 'month'));
-          }
+    function onVehFilterSelect(){
+      // 지역/차종/차량구분 필터는 주차별 트렌드 데이터에는 반영할 수 없으므로(주 단위 세부 데이터 없음),
+      // 필터가 켜진 상태에서 주차별을 보고 있었다면 자동으로 월별로 전환해 트렌드 그래프에 즉시 반영한다.
+      if ((vehRegionFilter || vehCarTypeFilter || vehVtypeFilter) && vehTrendGran === 'week'){
+        vehTrendGran = 'month';
+        const bar = document.getElementById('vehTrendGranBar');
+        if (bar){
+          bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.gran === 'month'));
         }
-        renderAll();
-      });
-    });
+      }
+      renderAll();
+    }
+    wireVehSearchSelect('region', 'vehRegionSearchInput', 'vehRegionSearchList', (val) => { vehRegionFilter = val; onVehFilterSelect(); });
+    wireVehSearchSelect('carType', 'vehCarTypeSearchInput', 'vehCarTypeSearchList', (val) => { vehCarTypeFilter = val; onVehFilterSelect(); });
+    wireVehSearchSelect('vtype', 'vehVtypeSearchInput', 'vehVtypeSearchList', (val) => { vehVtypeFilter = val; onVehFilterSelect(); });
     const slider = document.getElementById('vehLowPctSlider');
     slider.addEventListener('input', () => {
       vehLowPct = parseInt(slider.value,10);
