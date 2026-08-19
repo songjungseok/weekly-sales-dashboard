@@ -224,6 +224,7 @@
   .vehcartype-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   .vehcartype-table thead th { background: #f5f7fa; color: #5b6472; font-weight: 700; font-size: 12px; padding: 10px 12px; border-bottom: 2px solid #dfe3e9; white-space: nowrap; }
   .vehcartype-table thead th.sortcol { color: #1B2A4A; }
+  .vehcartype-table thead th.sortcol:hover { background: #eaeef5; }
   .vehcartype-table thead th .sort-arrow { color: #7a8494; font-size: 10px; margin-left: 2px; }
   .vehcartype-table tbody td { padding: 9px 12px; border-bottom: 1px solid #eef0f3; }
   .vehcartype-table tbody tr:nth-child(even) { background: #fafbfc; }
@@ -637,7 +638,7 @@
               <th style="text-align:right;">차량수</th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#1B2A4A;"></span>왕복매출(대당)</th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#d0346f;"></span>편도매출(대당)</th>
-              <th style="text-align:right;" class="sortcol">합계매출(대당) <span class="sort-arrow">▲</span></th>
+              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortTh" title="클릭해서 정렬 방향 전환">합계매출(대당) <span class="sort-arrow" id="vehCarTypeSortArrow">▲</span></th>
               <th style="text-align:right;">총매출(VAT제외)</th>
               <th style="text-align:right;">매출비중</th>
               <th style="text-align:right;">저매출차량비중</th>
@@ -3220,6 +3221,7 @@
   let vehBepTab = 'all';
   let vehBepMinCount = 3;
   let vehCarTypeExpanded = false;
+  let vehCarTypeSortDir = 'asc'; // 차종 분포 표 '합계매출(대당)' 헤더 클릭 시 오름차순/내림차순 토글
   const VEH_CARTYPE_SHOW = 10;
   const vehCharts = {};
 
@@ -3579,7 +3581,9 @@
     }
     const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
     const groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count}))
-      .sort((a,b)=>a.avg-b.avg);
+      .sort((a,b)=> vehCarTypeSortDir==='asc' ? a.avg-b.avg : b.avg-a.avg);
+    const sortArrowEl = document.getElementById('vehCarTypeSortArrow');
+    if (sortArrowEl) sortArrowEl.textContent = vehCarTypeSortDir==='asc' ? '▲' : '▼';
     if (countEl) countEl.textContent = `전체 ${vehicles.length}대 · ${groups.length}개 차종 기준`;
     if (!groups.length){
       tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
@@ -4038,6 +4042,11 @@
       renderCarTypeTable(vehicles, computeThreshold(vehicles, vehLowPct));
     });
     document.getElementById('vehCarTypeCsvBtn').addEventListener('click', exportCarTypeCsv);
+    document.getElementById('vehCarTypeSortTh').addEventListener('click', () => {
+      vehCarTypeSortDir = vehCarTypeSortDir === 'asc' ? 'desc' : 'asc';
+      const vehicles = currentVehicles();
+      renderCarTypeTable(vehicles, computeThreshold(vehicles, vehLowPct));
+    });
     document.getElementById('vehLowCsvBtn').addEventListener('click', exportLowCsv);
   }
 
