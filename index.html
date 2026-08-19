@@ -464,15 +464,15 @@
                 </div>
                 <div style="margin-bottom:10px;">
                   <div class="def-box-label">기준</div>
-                  <div>왕복전용 + 혼용차량의 카셰어링 목표 대당매출<br>(하이패스 포함 <b>1,116,495원</b>)</div>
+                  <div>왕복전용 + 혼용차량의 카셰어링 목표 대당매출<br>(하이패스 포함 <b>1,310,369원</b>)</div>
                 </div>
                 <div style="margin-bottom:10px;">
                   <div class="def-box-label">주행매출 포함 목표 (하이패스 제외)</div>
-                  <div>하이패스 비중 5% 가정<br>1,116,495원 × 95% = <b>1,060,670원</b></div>
+                  <div>하이패스 비중 5% 가정<br>1,310,369원 × 95% = <b>1,244,850원</b></div>
                 </div>
                 <div>
                   <div class="def-box-label">주행매출 제외 목표</div>
-                  <div>주행매출 비중 35% 가정<br>1,060,670원 × 65% = <b>689,435원</b></div>
+                  <div>주행매출 비중 35% 가정<br>1,244,850원 × 65% = <b>809,152원</b></div>
                 </div>
               </div>
             </span>
@@ -489,7 +489,7 @@
         <div style="font-size:11px; color:#888; margin-bottom:4px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <span>단위 : 원</span>
           <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#1B2A4A;display:inline-block;border-radius:2px;"></span>왕복(카셰어링)</span>
-          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#7C5CFC;display:inline-block;border-radius:2px;"></span>편도(리턴프리)</span>
+          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#5C8AA6;display:inline-block;border-radius:2px;"></span>편도(리턴프리)</span>
         </div>
         <div class="chart-box" style="height:440px;"><canvas id="chartPartnerRevBar"></canvas></div>
       </div>
@@ -2338,21 +2338,20 @@
     }).filter(Boolean).sort((a, b) => b.total - a.total);
     if (!entries.length) return;
     // 목표 대당매출: 경영목표 고정값(하이패스 제외, VAT/부가세 제외 기준). 주행매출제외 토글 시 다른 고정값 사용(팝업 '목표정의' 참고).
-    // 목표 달성 여부 색상은 왕복(카셰어링) 대당매출 기준(리턴프리 매출은 목표 산정 기준에 포함되지 않음) — 리턴프리 매출은 항상 별도 색으로 막대 위에 얹어 표시.
-    const PARTNER_BAR_TARGET_INCLUDE = 1060670;
-    const PARTNER_BAR_TARGET_EXCLUDE = 689435;
+    // 목표 기준은 왕복(카셰어링) 대당매출 기준(리턴프리 매출은 목표 산정 기준에 포함되지 않음) — 리턴프리 매출은 항상 별도 색(2025년 색상)으로 막대 위에 얹어 표시.
+    const PARTNER_BAR_TARGET_INCLUDE = 1244850;
+    const PARTNER_BAR_TARGET_EXCLUDE = 809152;
     const target = partnerBarExcludeDrive ? PARTNER_BAR_TARGET_EXCLUDE : PARTNER_BAR_TARGET_INCLUDE;
     const labels = entries.map(e => e.name);
     const roundData = entries.map(e => e.roundVal);
     const onewayData = entries.map(e => e.onewayVal);
-    const roundColors = entries.map(e => (e.roundVal < target) ? '#d0342c' : '#1B2A4A');
     const maxTotal = Math.max(...entries.map(e => e.total), target);
     charts['chartPartnerRevBar'] = new Chart(el.getContext('2d'), {
       data: {
         labels,
         datasets: [
-          { type: 'bar', label: '왕복(카셰어링)', data: roundData, backgroundColor: roundColors, borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 2 },
-          { type: 'bar', label: '편도(리턴프리)', data: onewayData, backgroundColor: '#7C5CFC', borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 3 },
+          { type: 'bar', label: '왕복(카셰어링)', data: roundData, backgroundColor: '#1B2A4A', borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 2 },
+          { type: 'bar', label: '편도(리턴프리)', data: onewayData, backgroundColor: '#5C8AA6', borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 3 },
           { type: 'line', label: '목표', data: labels.map(() => target), borderColor: '#e9a23b',
             borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]
