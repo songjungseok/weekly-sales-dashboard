@@ -3348,19 +3348,58 @@
     const bep = weightedBep(vehicles);
     const achieve = bep ? Math.round(avgRev/bep*1000)/10 : null;
     const lowCount = threshold==null ? 0 : vehicles.filter(v=>v.total<=threshold).length;
+    const bepDefBtnHtml = `
+      <span style="position:relative; display:inline-block; margin-left:6px; vertical-align:middle;">
+        <button type="button" id="vehBepDefToggleBtn" class="def-toggle-btn" style="font-size:9.5px; padding:2px 7px; vertical-align:middle;">ⓘ BEP정의</button>
+        <div id="vehBepDefBox" class="def-box" style="width:260px;">
+          <div class="def-box-head">
+            <b style="font-size:13px; letter-spacing:0.3px;">BEP 정의</b>
+            <span id="vehBepDefCloseBtn" class="def-box-close">✕</span>
+          </div>
+          <div style="margin-bottom:10px;">
+            <div class="def-box-label">기준</div>
+            <div>차종별 프라이싱 BEP 설정<br>(비용기반 <b>60개월</b> 기준)</div>
+          </div>
+          <div>
+            <div class="def-box-label">주의</div>
+            <div>경영목표(제휴사별 대당매출 목표)와는<br>다른 별도 지표입니다</div>
+          </div>
+        </div>
+      </span>`;
     const cards = [
       {label:'분석 차량 수', value: fmtNum(n), unit:'대', sub:'(기간내 운영차량)'},
       {label:'대당 평균 매출', value: fmtNum(avgRev), unit:'원', sub:'(VAT 제외)'},
       {label:'가중평균 BEP', value: bep!=null?fmtNum(bep):'—', unit:'원', sub:'(전체기준,VAT제외)'},
-      {label:'BEP 달성률', value: achieve!=null?achieve+'%':'—', unit:'', sub:'대당매출 ÷ BEP', color: (achieve!=null && achieve<100) ? '#A32D2D':'#3B6D11'},
+      {label:'BEP 달성률', value: achieve!=null?achieve+'%':'—', unit:'', sub:'대당매출 ÷ BEP', color: (achieve!=null && achieve<100) ? '#A32D2D':'#3B6D11', def:true},
       {label:'저매출 차량', value: fmtNum(lowCount), unit:'대', sub:'(현재 기준)', color:'#A32D2D'},
     ];
     grid.innerHTML = cards.map(c => `
       <div class="kpi-card">
-        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-label" style="display:flex; align-items:center;">${c.label}${c.def?bepDefBtnHtml:''}</div>
         <div class="kpi-value"${c.color?` style="color:${c.color}"`:''}>${c.value}${c.unit?` <span style="font-size:12px;color:#999;font-weight:500;">${c.unit}</span>`:''}</div>
         ${c.sub?`<div style="font-size:11px; color:#999;">${c.sub}</div>`:''}
       </div>`).join('');
+    wireVehBepDefBox();
+  }
+
+  function wireVehBepDefBox(){
+    const toggleBtn = document.getElementById('vehBepDefToggleBtn');
+    const box = document.getElementById('vehBepDefBox');
+    const closeBtn = document.getElementById('vehBepDefCloseBtn');
+    if (!toggleBtn || !box) return;
+    toggleBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const show = !box.classList.contains('open');
+      box.classList.toggle('open', show);
+      toggleBtn.textContent = show ? '✕ 닫기' : 'ⓘ BEP정의';
+    });
+    if (closeBtn){
+      closeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        box.classList.remove('open');
+        toggleBtn.textContent = 'ⓘ BEP정의';
+      });
+    }
   }
 
   function renderComposition(vehicles){
