@@ -7,6 +7,7 @@
 <title>Weekly Sales Report 대시보드</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/moonspam/NanumSquare@1.0/nanumsquare.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js" integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root { color-scheme: light; }
   * { box-sizing: border-box; }
@@ -83,6 +84,9 @@
   @media (max-width: 700px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
   .kpi-grid-4 { grid-template-columns: repeat(4, 1fr); }
   @media (max-width: 900px) { .kpi-grid-4 { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-grid-5 { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 1100px) { .kpi-grid-5 { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 700px) { .kpi-grid-5 { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
     background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 17px 18px;
   }
@@ -216,6 +220,7 @@
       <div class="sidebar-item active" data-page="page1"><span class="num">01</span><span>주간 실적</span></div>
       <div class="sidebar-item" data-page="page2"><span class="num">02</span><span>쿠폰별 사용량</span></div>
       <div class="sidebar-item" data-page="page3"><span class="num">03</span><span>제휴사별 현황</span></div>
+      <div class="sidebar-item" data-page="page4"><span class="num">04</span><span>차량별매출관리</span></div>
     </div>
     <div class="sidebar-status">
       <div class="dot-row"><span class="dot"></span>자동 업데이트 정상</div>
@@ -486,6 +491,120 @@
       </div>
     </div>
 
+    <div id="page4" class="page-content">
+      <div class="page-eyebrow">VEHICLE REVENUE MANAGEMENT</div>
+      <h1>🚗 차량별 매출관리</h1>
+      <div class="sub">차량번호 기준 월별 매출 · BEP(손익분기 매출) 달성 현황입니다. (편도/리턴프리 예약 데이터는 아직 없어 왕복 매출 기준으로만 표시됩니다.)</div>
+
+      <div class="section">
+        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:12px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12.5px; color:#666;">조회 기간</span>
+            <select id="vehYearSelect"></select>
+            <select id="vehMonthSelect"></select>
+          </div>
+          <span class="tab-bar" id="vehTypeTabBar">
+            <button type="button" class="tab-btn active" data-vtype="all">전체</button>
+            <button type="button" class="tab-btn" data-vtype="round">왕복전용</button>
+            <button type="button" class="tab-btn" data-vtype="mix">혼용</button>
+          </span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12.5px; color:#666;">지역</span>
+            <select id="vehRegionSelect"><option value="">전체</option></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12.5px; color:#666;">차종</span>
+            <select id="vehCarTypeSelect"><option value="">전체</option></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <span style="font-size:12.5px; color:#666;">차량구분</span>
+            <select id="vehVtypeSelect"><option value="">전체</option></select>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:12.5px; color:#666;">저매출 기준</span>
+            <input type="range" id="vehLowPctSlider" min="5" max="50" step="5" value="20" style="width:110px; vertical-align:middle;">
+            <span id="vehLowPctLabel" style="font-size:12px; color:#A32D2D; font-weight:700;">하위 20%</span>
+          </div>
+        </div>
+        <div id="vehLowPctDesc" style="font-size:12px; color:#A32D2D; font-weight:600;"></div>
+        <div id="vehEmptyNotice" style="display:none; font-size:12.5px; color:#999; padding:10px 0;">선택한 조건에 데이터가 없습니다.</div>
+      </div>
+
+      <div class="section">
+        <div class="kpi-grid kpi-grid-5" id="vehKpiGrid"></div>
+      </div>
+
+      <div class="section">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>📈 매출 트렌드</span>
+          <span style="display:flex; align-items:center; gap:12px; font-size:12.5px; flex-wrap:wrap;">
+            <span id="vehTrendYearChecks" style="display:flex; gap:8px; align-items:center;"></span>
+            <span class="tab-bar" id="vehTrendGranBar" style="gap:0;">
+              <button type="button" class="tab-btn active" data-gran="week">주차별</button>
+              <button type="button" class="tab-btn" data-gran="month">월별</button>
+            </span>
+            <span class="tab-bar" id="vehTrendMetricBar" style="gap:0;">
+              <button type="button" class="tab-btn active" data-metric="rev">대당매출</button>
+              <button type="button" class="tab-btn" data-metric="bep">BEP 달성률</button>
+            </span>
+          </span>
+        </h2>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 주차 기준: 월요일~일요일 · VAT 제외</div>
+        <div class="chart-box" style="height:340px;"><canvas id="chartVehTrend"></canvas></div>
+      </div>
+
+      <div class="section">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>🚘 차종별 현황</span>
+          <button type="button" id="vehCarTypeCsvBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">CSV 다운로드</button>
+        </h2>
+        <div style="overflow-x:auto;">
+          <table id="vehCarTypeTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차종명</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">차량수</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">대당매출</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">총매출(VAT제외)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">매출비중</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">저매출차량비중</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>📊 차종별 BEP 달성률 <span style="font-size:11px; color:#888; font-weight:400;">(상위 20개 차종, 차량수 3대 이상)</span></h2>
+        <div class="chart-box" style="height:360px;"><canvas id="chartVehCarTypeBep"></canvas></div>
+      </div>
+
+      <div class="section">
+        <h2>🚙 차량유형별 대당매출 &amp; BEP 달성</h2>
+        <div class="chart-box" style="height:360px;"><canvas id="chartVehVtypeBep"></canvas></div>
+      </div>
+
+      <div class="section">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>🔻 저매출 차량 추출 <span id="vehLowCount" style="color:#A32D2D; font-weight:700;"></span></span>
+          <button type="button" id="vehLowCsvBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">CSV 다운로드</button>
+        </h2>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 최대 300대까지 표시 · CSV 다운로드는 전체 포함 · 운영형태: 편도 이력 있으면 혼용(현재 데이터 기준 전량 왕복전용)</div>
+        <div style="overflow-x:auto;">
+          <table id="vehLowTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차량번호</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차종명</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차량유형</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">지역</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">매출(VAT제외)</th>
+              <th style="text-align:center; padding:8px 10px; border-bottom:1px solid #ddd;">매출등급</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -498,6 +617,9 @@
       document.getElementById(item.dataset.page).classList.add('active');
       if (item.dataset.page === 'page3' && typeof window.refreshPage3Charts === 'function'){
         setTimeout(window.refreshPage3Charts, 0);
+      }
+      if (item.dataset.page === 'page4' && typeof window.refreshPage4 === 'function'){
+        setTimeout(window.refreshPage4, 0);
       }
     });
   });
@@ -2939,6 +3061,428 @@
   goWeek(initial);
 })();
 </script>
+
+<script>
+(function(){
+  let vehData = null, vehBepMap = null, vehLoading = false, vehLoaded = false;
+  let vehSelectedMonth = null;
+  let vehTypeFilter = 'all';
+  let vehRegionFilter = '';
+  let vehCarTypeFilter = '';
+  let vehVtypeFilter = '';
+  let vehLowPct = 20;
+  let vehTrendGran = 'week';
+  let vehTrendMetric = 'rev';
+  let vehTrendYears = [];
+  const vehCharts = {};
+
+  function fmtNum(v, dec){
+    if (v==null || isNaN(v)) return '—';
+    return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: dec==null?0:dec});
+  }
+
+  function downloadCsv(filename, rows){
+    const csv = rows.map(r => r.map(c => {
+      const s = String(c==null?'':c);
+      return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+    }).join(',')).join('\r\n');
+    const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  async function ensureVehData(){
+    if (vehLoaded || vehLoading) return;
+    vehLoading = true;
+    const grid = document.getElementById('vehKpiGrid');
+    if (grid) grid.innerHTML = '<div style="padding:16px; color:#888; grid-column:1/-1;">데이터 로드 중...</div>';
+    try {
+      const [dataResp, bepBuf] = await Promise.all([
+        fetch('vehicle_data.json').then(r=>r.json()),
+        fetch('bep.xlsx').then(r=>r.arrayBuffer())
+      ]);
+      vehData = dataResp;
+      const wb = XLSX.read(bepBuf, {type:'array'});
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+      vehBepMap = {};
+      rows.forEach(r => { vehBepMap[r['차종명']] = r['bep(부가세제외)']; });
+      vehLoaded = true;
+      initVehPage();
+    } catch(e){
+      if (grid) grid.innerHTML = '<div style="padding:16px; color:#A32D2D; grid-column:1/-1;">데이터를 불러오지 못했습니다.</div>';
+      console.error('vehicle data load failed', e);
+    } finally {
+      vehLoading = false;
+    }
+  }
+
+  function initVehPage(){
+    if (!vehData || !vehData.available || !vehData.available.length) return;
+    const months = vehData.available;
+    if (!vehSelectedMonth || !months.includes(vehSelectedMonth)) vehSelectedMonth = months[months.length-1];
+    populateYearMonthSelects();
+    populateDependentFilters();
+    const allYears = Array.from(new Set(months.map(m=>parseInt(m.slice(0,4),10))));
+    vehTrendYears = allYears.slice(-3);
+    renderTrendYearChecks();
+    wireOnce();
+    renderAll();
+  }
+
+  function populateYearMonthSelects(){
+    const years = Array.from(new Set(vehData.available.map(m=>m.slice(0,4)))).sort();
+    const yearSel = document.getElementById('vehYearSelect');
+    const curYear = vehSelectedMonth.slice(0,4);
+    yearSel.innerHTML = years.map(y => `<option value="${y}" ${y===curYear?'selected':''}>${y}년</option>`).join('');
+    const monthSel = document.getElementById('vehMonthSelect');
+    const monthsOfYear = vehData.available.filter(m=>m.slice(0,4)===curYear).map(m=>m.slice(5,7));
+    const curMonth = vehSelectedMonth.slice(5,7);
+    monthSel.innerHTML = monthsOfYear.map(mo => `<option value="${mo}" ${mo===curMonth?'selected':''}>${parseInt(mo,10)}월</option>`).join('');
+  }
+
+  function currentVehicles(){
+    if (!vehData) return [];
+    const list = (vehData.months[vehSelectedMonth] || []);
+    return list.filter(v => {
+      if (vehTypeFilter==='round' && v.isMix) return false;
+      if (vehTypeFilter==='mix' && !v.isMix) return false;
+      if (vehRegionFilter && v.region !== vehRegionFilter) return false;
+      if (vehCarTypeFilter && v.carType !== vehCarTypeFilter) return false;
+      if (vehVtypeFilter && v.vtype !== vehVtypeFilter) return false;
+      return true;
+    });
+  }
+
+  function populateDependentFilters(){
+    const all = vehData.months[vehSelectedMonth] || [];
+    const regions = Array.from(new Set(all.map(v=>v.region).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+    const carTypes = Array.from(new Set(all.map(v=>v.carType).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+    const vtypes = Array.from(new Set(all.map(v=>v.vtype).filter(Boolean))).sort((a,b)=>a.localeCompare(b,'ko'));
+    fillSelect('vehRegionSelect', regions, vehRegionFilter);
+    fillSelect('vehCarTypeSelect', carTypes, vehCarTypeFilter);
+    fillSelect('vehVtypeSelect', vtypes, vehVtypeFilter);
+  }
+
+  function fillSelect(id, options, current){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (!options.includes(current)) current = '';
+    el.innerHTML = '<option value="">전체</option>' + options.map(o => `<option value="${o}" ${o===current?'selected':''}>${o}</option>`).join('');
+  }
+
+  function computeThreshold(vehicles, pct){
+    if (!vehicles.length) return null;
+    const sorted = vehicles.map(v=>v.total).sort((a,b)=>a-b);
+    let idx = Math.floor(sorted.length * pct / 100) - 1;
+    if (idx < 0) idx = 0;
+    return sorted[idx];
+  }
+
+  function weightedBep(vehicles){
+    let sumBep = 0, n = 0;
+    vehicles.forEach(v => {
+      const bep = vehBepMap[v.carType];
+      if (bep){ sumBep += bep; n++; }
+    });
+    return n ? Math.round(sumBep / n) : null;
+  }
+
+  function renderAll(){
+    const vehicles = currentVehicles();
+    const threshold = computeThreshold(vehicles, vehLowPct);
+    const emptyEl = document.getElementById('vehEmptyNotice');
+    if (emptyEl) emptyEl.style.display = vehicles.length ? 'none' : 'block';
+    const descEl = document.getElementById('vehLowPctDesc');
+    if (descEl) descEl.textContent = threshold!=null ? `하위 ${vehLowPct}% (${fmtNum(threshold)}원 이하)` : '';
+    renderKpis(vehicles, threshold);
+    renderCarTypeTable(vehicles, threshold);
+    renderLowTable(vehicles, threshold);
+    renderTrendChart();
+    renderCarTypeBepChart(vehicles);
+    renderVtypeBepChart(vehicles);
+  }
+
+  function renderKpis(vehicles, threshold){
+    const grid = document.getElementById('vehKpiGrid');
+    if (!grid) return;
+    if (!vehicles.length){
+      grid.innerHTML = '<div style="padding:16px; color:#888; grid-column:1/-1;">데이터가 없습니다.</div>';
+      return;
+    }
+    const n = vehicles.length;
+    const avgRev = Math.round(vehicles.reduce((s,v)=>s+v.total,0)/n);
+    const bep = weightedBep(vehicles);
+    const achieve = bep ? Math.round(avgRev/bep*1000)/10 : null;
+    const lowCount = threshold==null ? 0 : vehicles.filter(v=>v.total<=threshold).length;
+    const cards = [
+      {label:'분석 차량 수', value: fmtNum(n), unit:'대', sub:'(기간내 운영차량)'},
+      {label:'대당 평균 매출', value: fmtNum(avgRev), unit:'원', sub:'(VAT 제외)'},
+      {label:'가중평균 BEP', value: bep!=null?fmtNum(bep):'—', unit:'원', sub:'(전체기준,VAT제외)'},
+      {label:'BEP 달성률', value: achieve!=null?achieve+'%':'—', unit:'', sub:'대당매출 ÷ BEP', color: (achieve!=null && achieve<100) ? '#A32D2D':'#3B6D11'},
+      {label:'저매출 차량', value: fmtNum(lowCount), unit:'대', sub:'(현재 기준)', color:'#A32D2D'},
+    ];
+    grid.innerHTML = cards.map(c => `
+      <div class="kpi-card">
+        <div class="kpi-label">${c.label}</div>
+        <div class="kpi-value"${c.color?` style="color:${c.color}"`:''}>${c.value}${c.unit?` <span style="font-size:12px;color:#999;font-weight:500;">${c.unit}</span>`:''}</div>
+        ${c.sub?`<div style="font-size:11px; color:#999;">${c.sub}</div>`:''}
+      </div>`).join('');
+  }
+
+  function groupByCarType(vehicles){
+    const map = {};
+    vehicles.forEach(v => {
+      if (!map[v.carType]) map[v.carType] = { carType: v.carType, count:0, total:0, low:0 };
+      map[v.carType].count++;
+      map[v.carType].total += v.total;
+    });
+    return map;
+  }
+
+  function renderCarTypeTable(vehicles, threshold){
+    const tbody = document.querySelector('#vehCarTypeTable tbody');
+    if (!tbody) return;
+    const map = groupByCarType(vehicles);
+    if (threshold!=null){
+      vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
+    }
+    const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
+    const groups = Object.values(map).sort((a,b)=>b.total-a.total);
+    if (!groups.length){ tbody.innerHTML = '<tr><td colspan="6" style="padding:12px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>'; return; }
+    tbody.innerHTML = groups.map(g => {
+      const avg = Math.round(g.total/g.count);
+      const share = grandTotal ? (g.total/grandTotal*100).toFixed(1) : '0.0';
+      const lowShare = g.count ? (g.low/g.count*100).toFixed(1) : '0.0';
+      return `<tr>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:left;">${g.carType||'—'}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.count)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(avg)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.total)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${share}%</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${g.low>0?'#A32D2D':'#999'};">${lowShare}%</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderLowTable(vehicles, threshold){
+    const tbody = document.querySelector('#vehLowTable tbody');
+    const countEl = document.getElementById('vehLowCount');
+    if (!tbody) return;
+    if (threshold==null){ tbody.innerHTML = ''; if (countEl) countEl.textContent=''; return; }
+    const low = vehicles.filter(v=>v.total<=threshold).sort((a,b)=>a.total-b.total);
+    if (countEl) countEl.textContent = `(${fmtNum(low.length)}대)`;
+    const shown = low.slice(0,300);
+    tbody.innerHTML = shown.length ? shown.map(v => `
+      <tr>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.plate}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.carType||'—'}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.vtype||'—'}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.region||'—'}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(v.total)}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:center;"><span style="background:#FCEBEB; color:#A32D2D; border-radius:3px; padding:2px 8px; font-size:11.5px; font-weight:600;">저매출</span></td>
+      </tr>`).join('') : '<tr><td colspan="6" style="padding:12px; text-align:center; color:#999;">저매출 차량이 없습니다.</td></tr>';
+  }
+
+  function renderCarTypeBepChart(vehicles){
+    const el = document.getElementById('chartVehCarTypeBep');
+    if (!el) return;
+    if (vehCharts.carTypeBep) vehCharts.carTypeBep.destroy();
+    const map = groupByCarType(vehicles);
+    const groups = Object.values(map).filter(g=>g.count>=3 && vehBepMap[g.carType]);
+    groups.forEach(g => { g.avg = g.total/g.count; g.bep = vehBepMap[g.carType]; g.achieve = Math.round(g.avg/g.bep*1000)/10; });
+    groups.sort((a,b)=>b.count-a.count);
+    const top = groups.slice(0,20).sort((a,b)=>b.achieve-a.achieve);
+    if (!top.length) return;
+    const labels = top.map(g=>g.carType);
+    const data = top.map(g=>g.achieve);
+    const colors = data.map(v => v<100 ? '#d0342c' : '#1B2A4A');
+    vehCharts.carTypeBep = new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'BEP 달성률(%)', data, backgroundColor: colors }] },
+      options: {
+        indexAxis: 'y',
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display:false } },
+        scales: { x: { ticks: { callback: v => v+'%' } }, y: { ticks: { font:{size:10.5} } } }
+      }
+    });
+  }
+
+  function renderVtypeBepChart(vehicles){
+    const el = document.getElementById('chartVehVtypeBep');
+    if (!el) return;
+    if (vehCharts.vtypeBep) vehCharts.vtypeBep.destroy();
+    const map = {};
+    vehicles.forEach(v => {
+      if (!map[v.vtype]) map[v.vtype] = { vtype:v.vtype, count:0, total:0, bepSum:0, bepN:0 };
+      map[v.vtype].count++; map[v.vtype].total += v.total;
+      const bep = vehBepMap[v.carType];
+      if (bep){ map[v.vtype].bepSum += bep; map[v.vtype].bepN++; }
+    });
+    const groups = Object.values(map).filter(g=>g.vtype).map(g => ({
+      vtype: g.vtype, avg: Math.round(g.total/g.count), bep: g.bepN ? Math.round(g.bepSum/g.bepN) : null
+    })).sort((a,b)=>b.avg-a.avg);
+    if (!groups.length) return;
+    const labels = groups.map(g=>g.vtype);
+    vehCharts.vtypeBep = new Chart(el.getContext('2d'), {
+      data: {
+        labels,
+        datasets: [
+          { type:'bar', label:'대당매출', data: groups.map(g=>g.avg), backgroundColor:'#1B2A4A', order:2 },
+          { type:'line', label:'BEP', data: groups.map(g=>g.bep), borderColor:'#e9a23b', borderDash:[6,4], borderWidth:2, pointRadius:2, fill:false, order:1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
+        scales: { x: { ticks:{ font:{size:10.5} } }, y: { beginAtZero:true, ticks:{ callback: v=>v.toLocaleString('ko-KR') } } }
+      }
+    });
+  }
+
+  function renderTrendYearChecks(){
+    const wrap = document.getElementById('vehTrendYearChecks');
+    if (!wrap || !vehData) return;
+    const years = Array.from(new Set(vehData.available.map(m=>parseInt(m.slice(0,4),10)))).sort();
+    wrap.innerHTML = years.map(y => `<label style="font-size:12px;"><input type="checkbox" class="vehTrendYearChk" value="${y}" ${vehTrendYears.includes(y)?'checked':''}> ${y}년</label>`).join('');
+    wrap.querySelectorAll('.vehTrendYearChk').forEach(chk => {
+      chk.addEventListener('change', () => {
+        const y = parseInt(chk.value,10);
+        if (chk.checked){ if (!vehTrendYears.includes(y)) vehTrendYears.push(y); }
+        else { vehTrendYears = vehTrendYears.filter(x=>x!==y); }
+        renderTrendChart();
+      });
+    });
+  }
+
+  function renderTrendChart(){
+    const el = document.getElementById('chartVehTrend');
+    if (!el || !vehData) return;
+    if (vehCharts.trend) vehCharts.trend.destroy();
+    const src = vehTrendGran==='week' ? (vehData.weekly.all||[]) : (vehData.monthly.all||[]);
+    const filtered = src.filter(r => vehTrendYears.includes(r.year)).slice().sort((a,b) => {
+      if (vehTrendGran==='week') return (a.year-b.year) || (a.week-b.week);
+      return (a.year-b.year) || (a.month-b.month);
+    });
+    if (!filtered.length) return;
+    const refBep = weightedBep(currentVehicles()) || weightedBep(vehData.months[vehSelectedMonth]||[]);
+    const labels = filtered.map(r => vehTrendGran==='week' ? `${r.year}-W${String(r.week).padStart(2,'0')}` : `${r.year}-${String(r.month).padStart(2,'0')}`);
+    const avgRevArr = filtered.map(r => r.vehicles ? Math.round(r.totalRev/r.vehicles) : null);
+    const data = vehTrendMetric==='rev' ? avgRevArr : avgRevArr.map(v => (v!=null && refBep) ? Math.round(v/refBep*1000)/10 : null);
+    vehCharts.trend = new Chart(el.getContext('2d'), {
+      type: 'line',
+      data: { labels, datasets: [{
+        label: vehTrendMetric==='rev' ? '대당매출' : 'BEP 달성률',
+        data, borderColor:'#1B2A4A', backgroundColor:'#1B2A4A', tension:0.15, pointRadius:2, fill:false, spanGaps:true
+      }]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display:false } },
+        scales: {
+          x: { ticks: { autoSkip:true, maxRotation:60, font:{size:10} } },
+          y: { ticks: { callback: v => vehTrendMetric==='rev' ? v.toLocaleString('ko-KR') : v+'%' } }
+        }
+      }
+    });
+  }
+
+  function exportCarTypeCsv(){
+    const vehicles = currentVehicles();
+    const threshold = computeThreshold(vehicles, vehLowPct);
+    const map = groupByCarType(vehicles);
+    if (threshold!=null) vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
+    const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
+    const groups = Object.values(map).sort((a,b)=>b.total-a.total);
+    const rows = [['차종명','차량수','대당매출','총매출(VAT제외)','매출비중(%)','저매출차량비중(%)']];
+    groups.forEach(g => {
+      rows.push([g.carType, g.count, Math.round(g.total/g.count), g.total,
+        grandTotal?(g.total/grandTotal*100).toFixed(1):'0.0', g.count?(g.low/g.count*100).toFixed(1):'0.0']);
+    });
+    downloadCsv(`차종별현황_${vehSelectedMonth}.csv`, rows);
+  }
+
+  function exportLowCsv(){
+    const vehicles = currentVehicles();
+    const threshold = computeThreshold(vehicles, vehLowPct);
+    if (threshold==null) return;
+    const low = vehicles.filter(v=>v.total<=threshold).sort((a,b)=>a.total-b.total);
+    const rows = [['차량번호','차종명','차량유형','지역','매출(VAT제외)','매출등급']];
+    low.forEach(v => rows.push([v.plate, v.carType, v.vtype, v.region, v.total, '저매출']));
+    downloadCsv(`저매출차량_${vehSelectedMonth}.csv`, rows);
+  }
+
+  let wired = false;
+  function wireOnce(){
+    if (wired) return;
+    wired = true;
+    document.getElementById('vehYearSelect').addEventListener('change', (e) => {
+      const y = e.target.value;
+      const monthsOfYear = vehData.available.filter(m=>m.slice(0,4)===y);
+      vehSelectedMonth = monthsOfYear[monthsOfYear.length-1];
+      populateYearMonthSelects();
+      populateDependentFilters();
+      renderAll();
+    });
+    document.getElementById('vehMonthSelect').addEventListener('change', (e) => {
+      const y = document.getElementById('vehYearSelect').value;
+      vehSelectedMonth = `${y}-${e.target.value}`;
+      populateDependentFilters();
+      renderAll();
+    });
+    document.querySelectorAll('#vehTypeTabBar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#vehTypeTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        vehTypeFilter = btn.dataset.vtype;
+        renderAll();
+      });
+    });
+    ['vehRegionSelect','vehCarTypeSelect','vehVtypeSelect'].forEach(id => {
+      document.getElementById(id).addEventListener('change', (e) => {
+        if (id==='vehRegionSelect') vehRegionFilter = e.target.value;
+        if (id==='vehCarTypeSelect') vehCarTypeFilter = e.target.value;
+        if (id==='vehVtypeSelect') vehVtypeFilter = e.target.value;
+        renderAll();
+      });
+    });
+    const slider = document.getElementById('vehLowPctSlider');
+    slider.addEventListener('input', () => {
+      vehLowPct = parseInt(slider.value,10);
+      document.getElementById('vehLowPctLabel').textContent = `하위 ${vehLowPct}%`;
+      renderAll();
+    });
+    document.querySelectorAll('#vehTrendGranBar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#vehTrendGranBar .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        vehTrendGran = btn.dataset.gran;
+        renderTrendChart();
+      });
+    });
+    document.querySelectorAll('#vehTrendMetricBar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#vehTrendMetricBar .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        vehTrendMetric = btn.dataset.metric;
+        renderTrendChart();
+      });
+    });
+    document.getElementById('vehCarTypeCsvBtn').addEventListener('click', exportCarTypeCsv);
+    document.getElementById('vehLowCsvBtn').addEventListener('click', exportLowCsv);
+  }
+
+  window.refreshPage4 = function(){
+    if (!vehLoaded){ ensureVehData(); return; }
+    renderTrendChart();
+    renderCarTypeBepChart(currentVehicles());
+    renderVtypeBepChart(currentVehicles());
+  };
+})();
+</script>
+
 
 </body>
 </html>
