@@ -578,7 +578,7 @@
             </span>
           </span>
         </h2>
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 전체/왕복전용/혼용 탭 기준으로 집계</div>
+        <div id="vehTrendHint" style="font-size:11px; color:#888; margin-bottom:4px;">* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 전체/왕복전용/혼용 탭 기준으로 집계</div>
         <div class="chart-box" style="height:340px;"><canvas id="chartVehTrend"></canvas></div>
       </div>
 
@@ -3273,17 +3273,20 @@
     monthSel.innerHTML = monthsOfYear.map(mo => `<option value="${mo}" ${mo===curMonth?'selected':''}>${parseInt(mo,10)}월</option>`).join('');
   }
 
+  // 상단 필터(전체/왕복전용/혼용 탭 + 지역/차종/차량구분) 공통 판정 — currentVehicles()와 매출 트렌드(월별) 양쪽에서 재사용
+  function matchesActiveFilters(v){
+    if (vehTypeFilter==='round' && v.isMix) return false;
+    if (vehTypeFilter==='mix' && !v.isMix) return false;
+    if (vehRegionFilter && v.region !== vehRegionFilter) return false;
+    if (vehCarTypeFilter && v.carType !== vehCarTypeFilter) return false;
+    if (vehVtypeFilter && v.vtype !== vehVtypeFilter) return false;
+    return true;
+  }
+
   function currentVehicles(){
     if (!vehData) return [];
     const list = (vehData.months[vehSelectedMonth] || []);
-    return list.filter(v => {
-      if (vehTypeFilter==='round' && v.isMix) return false;
-      if (vehTypeFilter==='mix' && !v.isMix) return false;
-      if (vehRegionFilter && v.region !== vehRegionFilter) return false;
-      if (vehCarTypeFilter && v.carType !== vehCarTypeFilter) return false;
-      if (vehVtypeFilter && v.vtype !== vehVtypeFilter) return false;
-      return true;
-    });
+    return list.filter(matchesActiveFilters);
   }
 
   function populateDependentFilters(){
@@ -3659,31 +3662,61 @@
   const VEH_TREND_YEAR_OVERRIDES = { 2025:'#5C8AA6', 2026:'#1B2A4A' };
 
   // 전년 대비(YoY) 비교: 연도별로 별도 라인을 그려 같은 주차/월 위치에서 겹쳐 비교
+  // 월별 모드는 차량 단위 원본(vehData.months)에서 상단 필터(전체/왕복전용/혼용 + 지역/차종/차량구분)를 그대로 반영해 재계산한다.
+  // 주차별 모드는 vehicle_data.json에 전체/왕복전용/혼용 버킷만 미리 집계되어 있어, 지역/차종/차량구분 필터는 반영되지 않는다(데이터에 없음).
   function renderTrendChart(){
     const el = document.getElementById('chartVehTrend');
     if (!el || !vehData) return;
     if (vehCharts.trend) vehCharts.trend.destroy();
-    const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix'
-    const src = vehTrendGran==='week' ? (vehData.weekly[bucketKey]||[]) : (vehData.monthly[bucketKey]||[]);
-    if (!src.length) return;
     const years = vehTrendYears.slice().sort((a,b)=>a-b);
     if (!years.length) return;
-    const maxPeriod = vehTrendGran==='week' ? Math.max(1, ...src.map(r=>r.week)) : 12;
-    const periods = Array.from({length: maxPeriod}, (_, i) => i+1);
-    const labels = periods.map(p => vehTrendGran==='week' ? `${p}주차` : `${p}월`);
     const refBep = weightedBep(currentVehicles()) || weightedBep(vehData.months[vehSelectedMonth]||[]);
-    const datasets = years.map((y, idx) => {
-      const rowsByPeriod = {};
-      src.forEach(r => { if (r.year===y) rowsByPeriod[vehTrendGran==='week' ? r.week : r.month] = r; });
-      const data = periods.map(p => {
-        const r = rowsByPeriod[p];
-        if (!r || !r.vehicles) return null;
-        const avgRev = Math.round(r.totalRev / r.vehicles);
-        return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+    const extraFilterActive = !!(vehRegionFilter || vehCarTypeFilter || vehVtypeFilter);
+
+    const hintEl = document.getElementById('vehTrendHint');
+    if (hintEl){
+      hintEl.textContent = vehTrendGran==='week'
+        ? '* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 전체/왕복전용/혼용 탭 기준으로 집계' + (extraFilterActive ? ' (지역/차종/차량구분 필터는 주차별 트렌드에는 적용되지 않습니다 — 월별로 전환하면 반영됩니다)' : '')
+        : '* VAT 제외 · 상단 전체/왕복전용/혼용 탭 + 지역/차종/차량구분 필터 기준으로 집계';
+    }
+
+    let periods, labels, datasets;
+
+    if (vehTrendGran === 'week'){
+      const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix' — 주차별은 이 버킷만 지원
+      const src = vehData.weekly[bucketKey] || [];
+      if (!src.length) return;
+      const maxPeriod = Math.max(1, ...src.map(r=>r.week));
+      periods = Array.from({length: maxPeriod}, (_, i) => i+1);
+      labels = periods.map(p => `${p}주차`);
+      datasets = years.map((y, idx) => {
+        const rowsByPeriod = {};
+        src.forEach(r => { if (r.year===y) rowsByPeriod[r.week] = r; });
+        const data = periods.map(p => {
+          const r = rowsByPeriod[p];
+          if (!r || !r.vehicles) return null;
+          const avgRev = Math.round(r.totalRev / r.vehicles);
+          return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+        });
+        const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
+        return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
       });
-      const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
-      return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
-    });
+    } else {
+      periods = Array.from({length: 12}, (_, i) => i+1);
+      labels = periods.map(p => `${p}월`);
+      datasets = years.map((y, idx) => {
+        const data = periods.map(p => {
+          const mk = `${y}-${String(p).padStart(2,'0')}`;
+          const list = (vehData.months[mk] || []).filter(matchesActiveFilters);
+          if (!list.length) return null;
+          const avgRev = Math.round(list.reduce((s,v)=>s+v.total, 0) / list.length);
+          return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+        });
+        const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
+        return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
+      });
+    }
+
     vehCharts.trend = new Chart(el.getContext('2d'), {
       type: 'line',
       data: { labels, datasets },
