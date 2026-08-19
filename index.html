@@ -445,11 +445,14 @@
       <div class="section">
         <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <span>🏆 제휴사별 대당매출</span>
-          <div class="alert-period-bar">
-            <button type="button" id="partnerBarPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
-            <select id="partnerBarMonthSelect"></select>
-            <button type="button" id="partnerBarNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
-          </div>
+          <span style="display:flex; align-items:center; gap:14px; font-size:12.5px; font-weight:500;">
+            <label><input type="checkbox" id="partnerBarExcludeDriveCheckbox"> 주행매출제외</label>
+            <div class="alert-period-bar">
+              <button type="button" id="partnerBarPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
+              <select id="partnerBarMonthSelect"></select>
+              <button type="button" id="partnerBarNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
+            </div>
+          </span>
         </h2>
         <div style="font-size:11px; color:#888; margin-bottom:4px;">단위 : 원 (점선 = 전체 평균, 평균 미달 제휴사는 빨간 막대)</div>
         <div class="chart-box" style="height:440px;"><canvas id="chartPartnerRevBar"></canvas></div>
@@ -2009,6 +2012,7 @@
 
   // 제휴사별 대당매출 막대그래프 (내림차순, 전체 평균 미달 시 빨간 막대) — page3 최하단, 월단위 필터
   let selectedPartnerBarMonth = null;
+  let partnerBarExcludeDrive = false;
 
   function partnerBarAvailableMonths(){
     const set = new Set();
@@ -2019,7 +2023,7 @@
     return [...set].sort();
   }
 
-  function partnerMonthlyRevPerCar(monthKey, name){
+  function partnerMonthlyRevPerCar(monthKey, name, excludeDrive){
     const [y, mo] = monthKey.split('-').map(Number);
     let sumRev = 0, sumVeh = 0, n = 0;
     ALL_WEEKS.forEach(w => {
@@ -2029,12 +2033,13 @@
       if (!row || !row.제휴사별) return;
       const p = row.제휴사별[name];
       if (!p || !p.차량수) return;
-      sumRev += p.매출; sumVeh += p.차량수; n++;
+      const rev = excludeDrive ? (p.매출 - (p.주행매출||0)) : p.매출;
+      sumRev += rev; sumVeh += p.차량수; n++;
     });
     return n ? Math.round(sumRev / (sumVeh / n)) : null;
   }
 
-  function overallMonthlyRevPerCar(monthKey){
+  function overallMonthlyRevPerCar(monthKey, excludeDrive){
     const [y, mo] = monthKey.split('-').map(Number);
     let sumRev = 0, sumVeh = 0, n = 0;
     ALL_WEEKS.forEach(w => {
@@ -2042,7 +2047,8 @@
       if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
       const row = DATA_MAP[w];
       if (!row || !row.차량수) return;
-      sumRev += row.총매출; sumVeh += row.차량수; n++;
+      const rev = excludeDrive ? (row.총매출 - (row.주행매출||0)) : row.총매출;
+      sumRev += rev; sumVeh += row.차량수; n++;
     });
     return n ? Math.round(sumRev / (sumVeh / n)) : null;
   }
@@ -2068,11 +2074,11 @@
     if (!selectedPartnerBarMonth || !months.includes(selectedPartnerBarMonth)) selectedPartnerBarMonth = months[months.length-1];
     const names = allPartnerNames();
     const entries = names.map(name => {
-      const val = partnerMonthlyRevPerCar(selectedPartnerBarMonth, name);
+      const val = partnerMonthlyRevPerCar(selectedPartnerBarMonth, name, partnerBarExcludeDrive);
       return val != null ? { name, val } : null;
     }).filter(Boolean).sort((a, b) => b.val - a.val);
     if (!entries.length) return;
-    const overall = overallMonthlyRevPerCar(selectedPartnerBarMonth);
+    const overall = overallMonthlyRevPerCar(selectedPartnerBarMonth, partnerBarExcludeDrive);
     const labels = entries.map(e => e.name);
     const data = entries.map(e => e.val);
     const colors = entries.map(e => (overall != null && e.val < overall) ? '#d0342c' : '#1B2A4A');
@@ -2096,6 +2102,13 @@
     });
   }
 
+  const partnerBarExcludeDriveCheckboxEl = document.getElementById('partnerBarExcludeDriveCheckbox');
+  if (partnerBarExcludeDriveCheckboxEl){
+    partnerBarExcludeDriveCheckboxEl.addEventListener('change', () => {
+      partnerBarExcludeDrive = partnerBarExcludeDriveCheckboxEl.checked;
+      renderPartnerRevBarChart();
+    });
+  }
   const partnerBarMonthSelectEl = document.getElementById('partnerBarMonthSelect');
   if (partnerBarMonthSelectEl){
     partnerBarMonthSelectEl.addEventListener('change', () => {
