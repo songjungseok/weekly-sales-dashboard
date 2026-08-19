@@ -2263,10 +2263,11 @@
   }
 
   // 제휴사의 해당 월 리턴프리(편도) 대당매출 — 차량수는 카셰어링 계산과 동일하게 재사용, 매출만 리턴프리 총매출 추가
-  function partnerMonthlyOnewayRevPerCar(monthKey, name){
+  function partnerMonthlyOnewayRevPerCar(monthKey, name, excludeDrive){
     const monthData = PARTNER_ONEWAY_DATA[monthKey];
-    const rev = monthData ? (monthData[name] || 0) : 0;
+    let rev = monthData ? (monthData[name] || 0) : 0;
     if (!rev) return 0;
+    if (excludeDrive) rev = rev * 0.7; // 주행매출제외 토글 시 편도(리턴프리) 매출의 30% 제외, 70%만 반영
     const avgVeh = partnerMonthlyAvgVehicles(monthKey, name);
     return avgVeh ? Math.round(rev / avgVeh) : 0;
   }
@@ -2333,7 +2334,7 @@
     const entries = names.map(name => {
       const roundVal = partnerMonthlyRevPerCar(selectedPartnerBarMonth, name, partnerBarExcludeDrive);
       if (roundVal == null) return null;
-      const onewayVal = partnerMonthlyOnewayRevPerCar(selectedPartnerBarMonth, name);
+      const onewayVal = partnerMonthlyOnewayRevPerCar(selectedPartnerBarMonth, name, partnerBarExcludeDrive);
       return { name, roundVal, onewayVal, total: roundVal + onewayVal };
     }).filter(Boolean).sort((a, b) => b.total - a.total);
     if (!entries.length) return;
