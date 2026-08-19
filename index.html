@@ -209,11 +209,15 @@
   .veh-filter-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
   .veh-filter-row-top { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #eceef0; }
   .veh-refresh-btn {
-    background: #2f6fed; color: #fff; border: 1px solid #2f6fed; font-size: 13px; font-weight: 700;
-    padding: 8px 18px; border-radius: 0; cursor: pointer; font-family: inherit;
-    display: inline-flex; align-items: center; gap: 6px;
+    background: linear-gradient(135deg, #3b7bf0, #2158d6); color: #fff; border: none; font-size: 13px; font-weight: 700;
+    padding: 9px 20px; border-radius: 6px; cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 7px;
+    box-shadow: 0 2px 8px rgba(33,88,214,0.35);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
   }
-  .veh-refresh-btn:hover { background: #2559c9; border-color: #2559c9; }
+  .veh-refresh-btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+  .veh-refresh-btn:hover { background: linear-gradient(135deg, #2f6fed, #1c4bc0); box-shadow: 0 4px 12px rgba(33,88,214,0.45); transform: translateY(-1px); }
+  .veh-refresh-btn:active { transform: translateY(0); box-shadow: 0 1px 4px rgba(33,88,214,0.35); }
   .year-cb-label { margin-right: 14px; font-weight: 600; font-size: 13px; color: #333; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .year-cb-label input { cursor: pointer; }
   .foot { text-align: center; color: #999; font-size: 11.5px; margin-top: 24px; }
@@ -545,7 +549,10 @@
                 <input type="range" id="vehLowPctSlider" min="5" max="50" step="5" value="20" style="width:110px; vertical-align:middle;">
               </div>
             </div>
-            <button type="button" id="vehRefreshBtn" class="veh-refresh-btn">🔄 조회</button>
+            <button type="button" id="vehRefreshBtn" class="veh-refresh-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+              조회
+            </button>
           </div>
         </div>
         <div id="vehLowPctDesc" style="font-size:12px; color:#A32D2D; font-weight:600; margin-top:10px;"></div>
@@ -3669,30 +3676,43 @@
     });
   }
 
+  const VEH_TREND_COLORS = ['#1B2A4A','#5C8AA6','#2a9d8f','#e9a23b','#8e5ea2','#5aa469','#c2536a'];
+  const VEH_TREND_YEAR_OVERRIDES = { 2025:'#5C8AA6', 2026:'#1B2A4A' };
+
+  // 전년 대비(YoY) 비교: 연도별로 별도 라인을 그려 같은 주차/월 위치에서 겹쳐 비교
   function renderTrendChart(){
     const el = document.getElementById('chartVehTrend');
     if (!el || !vehData) return;
     if (vehCharts.trend) vehCharts.trend.destroy();
     const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix'
     const src = vehTrendGran==='week' ? (vehData.weekly[bucketKey]||[]) : (vehData.monthly[bucketKey]||[]);
-    const filtered = src.filter(r => vehTrendYears.includes(r.year)).slice().sort((a,b) => {
-      if (vehTrendGran==='week') return (a.year-b.year) || (a.week-b.week);
-      return (a.year-b.year) || (a.month-b.month);
-    });
-    if (!filtered.length) return;
+    if (!src.length) return;
+    const years = vehTrendYears.slice().sort((a,b)=>a-b);
+    if (!years.length) return;
+    const maxPeriod = vehTrendGran==='week' ? Math.max(1, ...src.map(r=>r.week)) : 12;
+    const periods = Array.from({length: maxPeriod}, (_, i) => i+1);
+    const labels = periods.map(p => vehTrendGran==='week' ? `${p}주차` : `${p}월`);
     const refBep = weightedBep(currentVehicles()) || weightedBep(vehData.months[vehSelectedMonth]||[]);
-    const labels = filtered.map(r => vehTrendGran==='week' ? `${r.year}-W${String(r.week).padStart(2,'0')}` : `${r.year}-${String(r.month).padStart(2,'0')}`);
-    const avgRevArr = filtered.map(r => r.vehicles ? Math.round(r.totalRev/r.vehicles) : null);
-    const data = vehTrendMetric==='rev' ? avgRevArr : avgRevArr.map(v => (v!=null && refBep) ? Math.round(v/refBep*1000)/10 : null);
+    const datasets = years.map((y, idx) => {
+      const rowsByPeriod = {};
+      src.forEach(r => { if (r.year===y) rowsByPeriod[vehTrendGran==='week' ? r.week : r.month] = r; });
+      const data = periods.map(p => {
+        const r = rowsByPeriod[p];
+        if (!r || !r.vehicles) return null;
+        const avgRev = Math.round(r.totalRev / r.vehicles);
+        return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+      });
+      const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
+      return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
+    });
     vehCharts.trend = new Chart(el.getContext('2d'), {
       type: 'line',
-      data: { labels, datasets: [{
-        label: vehTrendMetric==='rev' ? '대당매출' : 'BEP 달성률',
-        data, borderColor:'#1B2A4A', backgroundColor:'#1B2A4A', tension:0.15, pointRadius:2, fill:false, spanGaps:true
-      }]},
+      data: { labels, datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display:false } },
+        plugins: {
+          legend: { display:true, position:'top', labels:{ boxWidth:8, usePointStyle:true, pointStyle:'circle', font:{size:11} } }
+        },
         scales: {
           x: { ticks: { autoSkip:true, maxRotation:60, font:{size:10} } },
           y: { ticks: { callback: v => vehTrendMetric==='rev' ? v.toLocaleString('ko-KR') : v+'%' } }
