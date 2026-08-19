@@ -3755,52 +3755,69 @@
     if (!years.length) return;
     const refBep = weightedBep(currentVehicles()) || weightedBep(vehData.months[vehSelectedMonth]||[]);
     const extraFilterActive = !!(vehRegionFilter || vehCarTypeFilter || vehVtypeFilter);
-    const alignedWithPage1 = vehTypeFilter === 'all' && !extraFilterActive;
+    const alignedWithPage1 = vehTypeFilter === 'all';
     const hintEl = document.getElementById('vehTrendHint');
+
+    // 지역/차종/차량구분별 차량수 세부 데이터가 없어 주차별 화면에는 필터를 반영할 수 없다.
+    // 필터가 걸려 있는데 주차별을 보고 있다면 월별로 강제 전환(필터가 반영되는 유일한 단위).
+    if (alignedWithPage1 && extraFilterActive && vehTrendGran === 'week'){
+      vehTrendGran = 'month';
+      const bar = document.getElementById('vehTrendGranBar');
+      if (bar) bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.gran === 'month'));
+    }
 
     let periods, labels, datasets;
 
     if (alignedWithPage1){
       const weeksRaw = getDashboardWeeks();
       if (vehTrendGran === 'week'){
-        const byKey = {};
+        // 전체 탭 · 주차별: 차량수는 01과 동일(전체 등록 차량수), 매출은 왕복+편도 합산(vehicle_data.json weekly.all)
+        const dashVehByKey = {};
         weeksRaw.forEach(w => {
-          if (w.차량당매출 == null || !w.주시작일) return;
+          if (w.차량수 == null || !w.주시작일) return;
           const iw = isoWeekOf(w.주시작일);
-          byKey[`${iw.isoYear}-${iw.isoWeek}`] = w;
+          dashVehByKey[`${iw.isoYear}-${iw.isoWeek}`] = w.차량수;
         });
-        const maxPeriod = Math.max(1, ...weeksRaw.filter(w=>w.주시작일).map(w => isoWeekOf(w.주시작일).isoWeek));
+        const src = vehData.weekly.all || [];
+        const revByKey = {};
+        src.forEach(r => { revByKey[`${r.year}-${r.week}`] = r.totalRev; });
+        const maxPeriod = Math.max(1, ...src.map(r=>r.week));
         periods = Array.from({length: maxPeriod}, (_, i) => i+1);
         labels = periods.map(p => `${p}주차`);
         datasets = years.map((y, idx) => {
           const data = periods.map(p => {
-            const w = byKey[`${y}-${p}`];
-            if (!w) return null;
-            const avgRev = w.차량당매출;
+            const rev = revByKey[`${y}-${p}`];
+            const vehCount = dashVehByKey[`${y}-${p}`];
+            if (rev == null || !vehCount) return null;
+            const avgRev = Math.round(rev / vehCount);
             return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
           });
           const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
           return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
         });
       } else {
+        // 전체 탭 · 월별: 차량수는 01과 동일(전체 등록 차량수, 월 평균), 매출은 왕복+편도 합산 + 지역/차종/차량구분 필터 반영
         periods = Array.from({length: 12}, (_, i) => i+1);
         labels = periods.map(p => `${p}월`);
-        const byYearMonth = {};
+        const byYearMonthVeh = {};
         weeksRaw.forEach(w => {
-          if (w.총매출 == null || w.차량수 == null || !w.주시작일) return;
+          if (w.차량수 == null || !w.주시작일) return;
           const y = parseInt(w.주시작일.slice(0,4), 10);
           const mo = parseInt(w.주시작일.slice(5,7), 10);
           const key = `${y}-${mo}`;
-          if (!byYearMonth[key]) byYearMonth[key] = { sumRev: 0, sumVeh: 0, n: 0 };
-          byYearMonth[key].sumRev += w.총매출;
-          byYearMonth[key].sumVeh += w.차량수;
-          byYearMonth[key].n += 1;
+          if (!byYearMonthVeh[key]) byYearMonthVeh[key] = { sumVeh: 0, n: 0 };
+          byYearMonthVeh[key].sumVeh += w.차량수;
+          byYearMonthVeh[key].n += 1;
         });
         datasets = years.map((y, idx) => {
           const data = periods.map(p => {
-            const g = byYearMonth[`${y}-${p}`];
-            if (!g || !g.n) return null;
-            const avgRev = Math.round(g.sumRev / (g.sumVeh / g.n));
+            const mk = `${y}-${String(p).padStart(2,'0')}`;
+            const list = (vehData.months[mk] || []).filter(matchesActiveFilters);
+            const vehG = byYearMonthVeh[`${y}-${p}`];
+            if (!list.length || !vehG || !vehG.n) return null;
+            const sumRev = list.reduce((s,v)=>s+v.total, 0);
+            const avgVeh = vehG.sumVeh / vehG.n;
+            const avgRev = Math.round(sumRev / avgVeh);
             return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
           });
           const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
@@ -3809,11 +3826,11 @@
       }
       if (hintEl){
         hintEl.textContent = vehTrendGran==='week'
-          ? '* 01 주간실적 · 대당매출과 동일 기준(왕복매출 ÷ 전체 등록 차량수) · VAT 제외'
-          : '* 01 주간실적과 동일 기준(왕복매출 ÷ 전체 등록 차량수)을 월 단위로 집계 · VAT 제외';
+          ? '* 차량수는 01 주간실적과 동일 기준(전체 등록 차량수) · 매출은 왕복+편도 합산 · VAT 제외'
+          : '* 차량수는 01 주간실적과 동일 기준(전체 등록 차량수, 월 평균) · 매출은 왕복+편도 합산 · 지역/차종/차량구분 필터 반영 · VAT 제외';
       }
     } else if (vehTrendGran === 'week'){
-      const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix'
+      const bucketKey = vehTypeFilter; // 'round' | 'mix'
       const src = vehData.weekly[bucketKey] || [];
       if (!src.length) return;
       const maxPeriod = Math.max(1, ...src.map(r=>r.week));
