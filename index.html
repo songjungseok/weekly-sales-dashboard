@@ -489,7 +489,7 @@
         <div style="font-size:11px; color:#888; margin-bottom:4px; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
           <span>단위 : 원</span>
           <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#1B2A4A;display:inline-block;border-radius:2px;"></span>왕복(카셰어링)</span>
-          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#d0346f;display:inline-block;border-radius:2px;"></span>편도(리턴프리)</span>
+          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#7C5CFC;display:inline-block;border-radius:2px;"></span>편도(리턴프리)</span>
         </div>
         <div class="chart-box" style="height:440px;"><canvas id="chartPartnerRevBar"></canvas></div>
       </div>
@@ -2351,8 +2351,8 @@
       data: {
         labels,
         datasets: [
-          { type: 'bar', label: '왕복(카셰어링)', data: roundData, backgroundColor: roundColors, stack: 'rev', order: 2 },
-          { type: 'bar', label: '편도(리턴프리)', data: onewayData, backgroundColor: '#d0346f', stack: 'rev', order: 3 },
+          { type: 'bar', label: '왕복(카셰어링)', data: roundData, backgroundColor: roundColors, borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 2 },
+          { type: 'bar', label: '편도(리턴프리)', data: onewayData, backgroundColor: '#7C5CFC', borderColor: '#fff', borderWidth: 1, stack: 'rev', order: 3 },
           { type: 'line', label: '목표', data: labels.map(() => target), borderColor: '#e9a23b',
             borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]
