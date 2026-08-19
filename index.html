@@ -205,6 +205,15 @@
   }
   .tab-btn:hover { background: #eef2f6; border-color: #b9c2cc; }
   .tab-btn.active { background: #1a2b3c; color: #fff; border-color: #1a2b3c; }
+  .veh-filter-box { background: #fff; border: 1px solid #e5e5e7; padding: 14px 18px; }
+  .veh-filter-row { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  .veh-filter-row-top { padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #eceef0; }
+  .veh-refresh-btn {
+    background: #2f6fed; color: #fff; border: 1px solid #2f6fed; font-size: 13px; font-weight: 700;
+    padding: 8px 18px; border-radius: 0; cursor: pointer; font-family: inherit;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .veh-refresh-btn:hover { background: #2559c9; border-color: #2559c9; }
   .year-cb-label { margin-right: 14px; font-weight: 600; font-size: 13px; color: #333; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .year-cb-label input { cursor: pointer; }
   .foot { text-align: center; color: #999; font-size: 11.5px; margin-top: 24px; }
@@ -501,35 +510,45 @@
       <div class="sub">차량번호 기준 월별 매출(왕복 카셰어링 + 편도 리턴프리) · BEP(손익분기 매출) 달성 현황입니다.</div>
 
       <div class="section">
-        <div style="display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:12px;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12.5px; color:#666;">조회 기간</span>
-            <select id="vehYearSelect"></select>
-            <select id="vehMonthSelect"></select>
+        <div class="veh-filter-box">
+          <div class="veh-filter-row veh-filter-row-top">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:12.5px; color:#666;">조회 기간</span>
+              <select id="vehYearSelect"></select>
+              <span style="font-size:12.5px; color:#666;">년</span>
+              <select id="vehMonthSelect"></select>
+              <span style="font-size:12.5px; color:#666;">월</span>
+            </div>
+            <div style="font-size:11.5px; color:#999;">최종 업데이트: <span id="vehLastUpdateText">—</span></div>
           </div>
-          <span class="tab-bar" id="vehTypeTabBar">
-            <button type="button" class="tab-btn active" data-vtype="all">전체</button>
-            <button type="button" class="tab-btn" data-vtype="round">왕복전용</button>
-            <button type="button" class="tab-btn" data-vtype="mix">혼용</button>
-          </span>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12.5px; color:#666;">지역</span>
-            <select id="vehRegionSelect"><option value="">전체</option></select>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12.5px; color:#666;">차종</span>
-            <select id="vehCarTypeSelect"><option value="">전체</option></select>
-          </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:12.5px; color:#666;">차량구분</span>
-            <select id="vehVtypeSelect"><option value="">전체</option></select>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:12.5px; color:#666;">저매출 기준</span>
-            <input type="range" id="vehLowPctSlider" min="5" max="50" step="5" value="20" style="width:110px; vertical-align:middle;">
+          <div class="veh-filter-row veh-filter-row-bottom">
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <span class="tab-bar" id="vehTypeTabBar">
+                <button type="button" class="tab-btn active" data-vtype="all">전체</button>
+                <button type="button" class="tab-btn" data-vtype="round">왕복전용</button>
+                <button type="button" class="tab-btn" data-vtype="mix">혼용</button>
+              </span>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12.5px; color:#666;">지역</span>
+                <select id="vehRegionSelect"><option value="">전체</option></select>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12.5px; color:#666;">차종</span>
+                <select id="vehCarTypeSelect"><option value="">전체</option></select>
+              </div>
+              <div style="display:flex; align-items:center; gap:6px;">
+                <span style="font-size:12.5px; color:#666;">차량구분</span>
+                <select id="vehVtypeSelect"><option value="">전체</option></select>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:12.5px; color:#666;">저매출 기준</span>
+                <input type="range" id="vehLowPctSlider" min="5" max="50" step="5" value="20" style="width:110px; vertical-align:middle;">
+              </div>
+            </div>
+            <button type="button" id="vehRefreshBtn" class="veh-refresh-btn">🔄 조회</button>
           </div>
         </div>
-        <div id="vehLowPctDesc" style="font-size:12px; color:#A32D2D; font-weight:600;"></div>
+        <div id="vehLowPctDesc" style="font-size:12px; color:#A32D2D; font-weight:600; margin-top:10px;"></div>
         <div id="vehEmptyNotice" style="display:none; font-size:12.5px; color:#999; padding:10px 0;">선택한 조건에 데이터가 없습니다.</div>
       </div>
 
@@ -3251,6 +3270,8 @@
     const allYears = Array.from(new Set(months.map(m=>parseInt(m.slice(0,4),10))));
     vehTrendYears = allYears.slice(-3);
     renderTrendYearChecks();
+    const lastUpdateEl = document.getElementById('vehLastUpdateText');
+    if (lastUpdateEl) lastUpdateEl.textContent = vehData.generated_at || '—';
     wireOnce();
     renderAll();
   }
@@ -3744,6 +3765,10 @@
       vehLowPct = parseInt(slider.value,10);
       renderAll();
     });
+    const refreshBtn = document.getElementById('vehRefreshBtn');
+    if (refreshBtn){
+      refreshBtn.addEventListener('click', () => { renderAll(); });
+    }
     document.querySelectorAll('#vehTrendGranBar .tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('#vehTrendGranBar .tab-btn').forEach(b=>b.classList.remove('active'));
