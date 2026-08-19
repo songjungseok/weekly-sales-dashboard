@@ -3721,9 +3721,32 @@
   const VEH_TREND_COLORS = ['#1B2A4A','#5C8AA6','#2a9d8f','#e9a23b','#8e5ea2','#5aa469','#c2536a'];
   const VEH_TREND_YEAR_OVERRIDES = { 2025:'#5C8AA6', 2026:'#1B2A4A' };
 
+  // 01 주간실적의 dashboard-data(주간 레코드)를 04에서도 그대로 읽어와 "대당매출" 기준을 맞춘다.
+  // (dashboard-data 파싱 로직은 01 페이지의 다른 <script> 안에 있어 변수 공유가 안 되므로, DOM에서 JSON을 직접 다시 읽는다.)
+  let VEH_DASHBOARD_WEEKS_CACHE = null;
+  function getDashboardWeeks(){
+    if (VEH_DASHBOARD_WEEKS_CACHE) return VEH_DASHBOARD_WEEKS_CACHE;
+    let list = [];
+    try {
+      const dEl = document.getElementById('dashboard-data');
+      if (dEl) list = JSON.parse(dEl.textContent);
+    } catch(e) { list = []; }
+    VEH_DASHBOARD_WEEKS_CACHE = list;
+    return list;
+  }
+  function isoWeekOf(dateStr){
+    const d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return { isoYear: d.getUTCFullYear(), isoWeek: weekNo };
+  }
+
   // 전년 대비(YoY) 비교: 연도별로 별도 라인을 그려 같은 주차/월 위치에서 겹쳐 비교
-  // 월별 모드는 차량 단위 원본(vehData.months)에서 상단 필터(전체/왕복전용/혼용 + 지역/차종/차량구분)를 그대로 반영해 재계산한다.
-  // 주차별 모드는 vehicle_data.json에 전체/왕복전용/혼용 버킷만 미리 집계되어 있어, 지역/차종/차량구분 필터는 반영되지 않는다(데이터에 없음).
+  // 상단 필터가 전체/전체/전체/전체(탭+지역+차종+차량구분 모두 미선택)일 때는 01 주간실적의 "대당매출"과 완전히 같은 기준
+  // (왕복매출만 ÷ 전체 등록 차량수)으로 계산해 두 그래프의 숫자가 일치하게 만든다.
+  // 왕복전용/혼용 탭이나 지역/차종/차량구분 필터를 걸면 — 01에는 그런 구분 자체가 없어 맞출 기준이 없으므로 —
+  // vehicle_data.json의 차량 단위 데이터로 계산한다(기존 방식).
   function renderTrendChart(){
     const el = document.getElementById('chartVehTrend');
     if (!el || !vehData) return;
@@ -3732,18 +3755,65 @@
     if (!years.length) return;
     const refBep = weightedBep(currentVehicles()) || weightedBep(vehData.months[vehSelectedMonth]||[]);
     const extraFilterActive = !!(vehRegionFilter || vehCarTypeFilter || vehVtypeFilter);
-
+    const alignedWithPage1 = vehTypeFilter === 'all' && !extraFilterActive;
     const hintEl = document.getElementById('vehTrendHint');
-    if (hintEl){
-      hintEl.textContent = vehTrendGran==='week'
-        ? '* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 전체/왕복전용/혼용 탭 기준으로 집계' + (extraFilterActive ? ' (지역/차종/차량구분 필터는 주차별 트렌드에는 적용되지 않습니다 — 월별로 전환하면 반영됩니다)' : '')
-        : '* VAT 제외 · 상단 전체/왕복전용/혼용 탭 + 지역/차종/차량구분 필터 기준으로 집계';
-    }
 
     let periods, labels, datasets;
 
-    if (vehTrendGran === 'week'){
-      const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix' — 주차별은 이 버킷만 지원
+    if (alignedWithPage1){
+      const weeksRaw = getDashboardWeeks();
+      if (vehTrendGran === 'week'){
+        const byKey = {};
+        weeksRaw.forEach(w => {
+          if (w.차량당매출 == null || !w.주시작일) return;
+          const iw = isoWeekOf(w.주시작일);
+          byKey[`${iw.isoYear}-${iw.isoWeek}`] = w;
+        });
+        const maxPeriod = Math.max(1, ...weeksRaw.filter(w=>w.주시작일).map(w => isoWeekOf(w.주시작일).isoWeek));
+        periods = Array.from({length: maxPeriod}, (_, i) => i+1);
+        labels = periods.map(p => `${p}주차`);
+        datasets = years.map((y, idx) => {
+          const data = periods.map(p => {
+            const w = byKey[`${y}-${p}`];
+            if (!w) return null;
+            const avgRev = w.차량당매출;
+            return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+          });
+          const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
+          return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
+        });
+      } else {
+        periods = Array.from({length: 12}, (_, i) => i+1);
+        labels = periods.map(p => `${p}월`);
+        const byYearMonth = {};
+        weeksRaw.forEach(w => {
+          if (w.총매출 == null || w.차량수 == null || !w.주시작일) return;
+          const y = parseInt(w.주시작일.slice(0,4), 10);
+          const mo = parseInt(w.주시작일.slice(5,7), 10);
+          const key = `${y}-${mo}`;
+          if (!byYearMonth[key]) byYearMonth[key] = { sumRev: 0, sumVeh: 0, n: 0 };
+          byYearMonth[key].sumRev += w.총매출;
+          byYearMonth[key].sumVeh += w.차량수;
+          byYearMonth[key].n += 1;
+        });
+        datasets = years.map((y, idx) => {
+          const data = periods.map(p => {
+            const g = byYearMonth[`${y}-${p}`];
+            if (!g || !g.n) return null;
+            const avgRev = Math.round(g.sumRev / (g.sumVeh / g.n));
+            return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
+          });
+          const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
+          return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
+        });
+      }
+      if (hintEl){
+        hintEl.textContent = vehTrendGran==='week'
+          ? '* 01 주간실적 · 대당매출과 동일 기준(왕복매출 ÷ 전체 등록 차량수) · VAT 제외'
+          : '* 01 주간실적과 동일 기준(왕복매출 ÷ 전체 등록 차량수)을 월 단위로 집계 · VAT 제외';
+      }
+    } else if (vehTrendGran === 'week'){
+      const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix'
       const src = vehData.weekly[bucketKey] || [];
       if (!src.length) return;
       const maxPeriod = Math.max(1, ...src.map(r=>r.week));
@@ -3761,6 +3831,9 @@
         const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
         return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
       });
+      if (hintEl){
+        hintEl.textContent = '* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 왕복전용/혼용 탭 기준으로 집계 (01 주간실적과는 다른 기준 — 왕복+편도 합산, 실제 운행차량 기준)' + (extraFilterActive ? ' · 지역/차종/차량구분 필터는 주차별에는 적용되지 않습니다(월별로 전환하면 반영)' : '');
+      }
     } else {
       periods = Array.from({length: 12}, (_, i) => i+1);
       labels = periods.map(p => `${p}월`);
@@ -3775,6 +3848,9 @@
         const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
         return { label: `${y}년`, data, borderColor: color, backgroundColor: color, tension:0.15, pointRadius:2, fill:false, spanGaps:true };
       });
+      if (hintEl){
+        hintEl.textContent = '* VAT 제외 · 상단 왕복전용/혼용 탭 + 지역/차종/차량구분 필터 기준으로 집계 (01 주간실적과는 다른 기준 — 왕복+편도 합산, 실제 운행차량 기준)';
+      }
     }
 
     vehCharts.trend = new Chart(el.getContext('2d'), {
