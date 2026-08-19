@@ -2993,15 +2993,9 @@
           <div class="chart-box"><canvas id="chartHour"></canvas></div>
         </div>
       </div>
-      <div class="charts-row">
-        <div class="section">
-          <h2>🚙 차량유형별 대당 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
-          <div class="chart-box tall"><canvas id="chartType"></canvas></div>
-        </div>
-        <div class="section">
-          <h2>📍 지역별 대당 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
-          <div class="chart-box tall"><canvas id="chartRegion"></canvas></div>
-        </div>
+      <div class="section">
+        <h2>📍 지역별 대당 건수 (Top5 + 변화율 Top3) — 전년동기 vs 이번 주</h2>
+        <div class="chart-box tall"><canvas id="chartRegion"></canvas></div>
       </div>
       <div class="section">
         <h2>🔎 비교 기준 안내</h2>
@@ -3041,21 +3035,6 @@
     if (yoyWeek) hourDatasets.push({ label: `전년동기 (${shortRange(yoyWeek.row)})`, data: (yoyWeek.row.시간대별||[]).map(v=>perVeh(v, yoyWeek.row.활성차량수)), backgroundColor: COLORS[1] });
     hourDatasets.push({ label: `이번 주 (${shortRange(row)})`, data: (row.시간대별||[]).map(v=>perVeh(v, row.활성차량수)), backgroundColor: COLORS[0] });
     barChart('chartHour', hourLabels, hourDatasets);
-
-    // 차량유형: 건수 Top5 + 변화율(전년동기 우선, 없으면 전주) 기준 Top3 — 항목이 많아 라벨이 겹치는 문제 방지
-    // (Top5/변화율 선정은 원건수 기준, 표시값만 해당 유형 자신의 차량수로 나눈 대당 건수)
-    const curTypeMap = Object.fromEntries(Object.entries(row.차량유형별).map(([k,v])=>[k,v.건수]));
-    const compTypeWeek = yoyWeek || prevWeek;
-    const compTypeMap = compTypeWeek ? Object.fromEntries(Object.entries(compTypeWeek.row.차량유형별).map(([k,v])=>[k,v.건수])) : null;
-    const typeLabels = topByCountAndChange(curTypeMap, compTypeMap, 5, 3);
-    const typeDatasets = [];
-    if (yoyWeek){
-      const yoyTypeVeh = yoyWeek.row.차량유형별 || {};
-      typeDatasets.push({ label: '전년동기', data: typeLabels.map(l=>perVeh((yoyTypeVeh[l]||{}).건수||0, (yoyTypeVeh[l]||{}).차량수)), backgroundColor: COLORS[1] });
-    }
-    const curTypeVeh = row.차량유형별 || {};
-    typeDatasets.push({ label: '이번 주', data: typeLabels.map(l=>perVeh((curTypeVeh[l]||{}).건수||0, (curTypeVeh[l]||{}).차량수)), backgroundColor: COLORS[0] });
-    barChart('chartType', typeLabels, typeDatasets, { indexAxis: 'y' });
 
     // 지역: 건수 Top5 + 변화율(전년동기 우선, 없으면 전주) 기준 Top3
     // (표시값은 해당 지역 자신의 활성차량수로 나눈 대당 건수 — 차량유형과 동일하게 지역별로도 각자 다른 분모 적용)
