@@ -3741,6 +3741,32 @@
     const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
     return { isoYear: d.getUTCFullYear(), isoWeek: weekNo };
   }
+  // vehicle_data.json의 weekly 버킷은 ISO 8601 주차(isoyear/isoweek) 기준으로 집계돼 있다.
+  // 01 페이지의 "N주차"는 ISO 주차가 아니라 그 해 1/1 이후 첫 월요일부터 순서대로 세는 방식(allMondaysOfYear)이라
+  // 두 기준이 다르면 같은 "N주차" 라벨 아래 실제로는 다른 주(날짜)가 표시될 수 있다.
+  // 따라서 ISO 주차를 다시 월요일 날짜(YYYY-MM-DD)로 환산해, 01과 동일하게 실제 날짜로 매칭한다.
+  function isoWeekToMonday(isoYear, isoWeek){
+    const jan4 = new Date(Date.UTC(isoYear, 0, 4));
+    const jan4Day = jan4.getUTCDay() || 7; // Mon=1 ... Sun=7
+    const week1Monday = new Date(jan4);
+    week1Monday.setUTCDate(jan4.getUTCDate() - jan4Day + 1);
+    const monday = new Date(week1Monday);
+    monday.setUTCDate(week1Monday.getUTCDate() + (isoWeek - 1) * 7);
+    const y = monday.getUTCFullYear(), m = String(monday.getUTCMonth()+1).padStart(2,'0'), dd = String(monday.getUTCDate()).padStart(2,'0');
+    return `${y}-${m}-${dd}`;
+  }
+  // 01 페이지와 완전히 동일한 "N주차" 정의: 그 해 1/1 이후 첫 월요일부터 7일 간격으로 나열.
+  function allMondaysOfYearVeh(year){
+    let d = new Date(year, 0, 1);
+    while (d.getDay() !== 1) d.setDate(d.getDate() + 1);
+    const list = [];
+    while (d.getFullYear() === year){
+      const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), dd = String(d.getDate()).padStart(2,'0');
+      list.push(`${y}-${m}-${dd}`);
+      d.setDate(d.getDate() + 7);
+    }
+    return list;
+  }
 
   // 전년 대비(YoY) 비교: 연도별로 별도 라인을 그려 같은 주차/월 위치에서 겹쳐 비교
   // 상단 필터가 전체/전체/전체/전체(탭+지역+차종+차량구분 모두 미선택)일 때는 01 주간실적의 "대당매출"과 완전히 같은 기준
@@ -3771,25 +3797,30 @@
     if (alignedWithPage1){
       const weeksRaw = getDashboardWeeks();
       if (vehTrendGran === 'week'){
-        // 전체 탭 · 주차별: 차량수는 01과 동일(전체 등록 차량수), 매출은 왕복+편도 합산(vehicle_data.json weekly.all)
-        const dashVehByKey = {};
+        // 전체 탭 · 주차별: 01과 완전히 동일한 "N주차"(그 해 첫 월요일부터 순차) 기준으로 날짜를 정하고,
+        // 차량수는 01의 dashboard-data(전체 등록 차량수), 매출은 왕복(01 총매출)+편도(vehicle_data.json 주간 편도매출, 날짜로 매칭) 합산.
+        const dashByDate = {};
         weeksRaw.forEach(w => {
-          if (w.차량수 == null || !w.주시작일) return;
-          const iw = isoWeekOf(w.주시작일);
-          dashVehByKey[`${iw.isoYear}-${iw.isoWeek}`] = w.차량수;
+          if (!w.주시작일) return;
+          dashByDate[w.주시작일] = w;
         });
-        const src = vehData.weekly.all || [];
-        const revByKey = {};
-        src.forEach(r => { revByKey[`${r.year}-${r.week}`] = r.totalRev; });
-        const maxPeriod = Math.max(1, ...src.map(r=>r.week));
-        periods = Array.from({length: maxPeriod}, (_, i) => i+1);
+        const onewayByDate = {};
+        (vehData.weekly.all || []).forEach(r => {
+          onewayByDate[isoWeekToMonday(r.year, r.week)] = r.onewayRev || 0;
+        });
+        const maxWeeks = Math.max(1, ...years.map(y => allMondaysOfYearVeh(y).length));
+        periods = Array.from({length: maxWeeks}, (_, i) => i+1);
         labels = periods.map(p => `${p}주차`);
         datasets = years.map((y, idx) => {
+          const mondays = allMondaysOfYearVeh(y);
           const data = periods.map(p => {
-            const rev = revByKey[`${y}-${p}`];
-            const vehCount = dashVehByKey[`${y}-${p}`];
-            if (rev == null || !vehCount) return null;
-            const avgRev = Math.round(rev / vehCount);
+            const dateStr = mondays[p-1];
+            if (!dateStr) return null;
+            const w = dashByDate[dateStr];
+            if (!w || w.총매출 == null || !w.차량수) return null;
+            const roundRev = w.총매출;
+            const onewayRev = onewayByDate[dateStr] || 0;
+            const avgRev = Math.round((roundRev + onewayRev) / w.차량수);
             return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
           });
           const color = VEH_TREND_YEAR_OVERRIDES[y] || VEH_TREND_COLORS[idx % VEH_TREND_COLORS.length];
