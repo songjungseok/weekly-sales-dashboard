@@ -454,7 +454,7 @@
             </div>
           </span>
         </h2>
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">단위 : 원 (점선 = 전체 평균, 평균 미달 제휴사는 빨간 막대)</div>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div>
         <div class="chart-box" style="height:440px;"><canvas id="chartPartnerRevBar"></canvas></div>
       </div>
     </div>
@@ -2091,8 +2091,26 @@
             borderDash: [6, 4], borderWidth: 2, pointRadius: 0, fill: false, order: 1 }
         ]
       },
+      plugins: [{
+        id: 'partnerBarTargetLabel',
+        afterDatasetsDraw(chart){
+          const meta = chart.getDatasetMeta(1);
+          if (!meta || !meta.data || !meta.data.length) return;
+          const lastPoint = meta.data[meta.data.length - 1];
+          if (!lastPoint) return;
+          const ctx = chart.ctx;
+          ctx.save();
+          ctx.font = '11px sans-serif';
+          ctx.fillStyle = '#c9791a';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('목표매출', lastPoint.x + 6, lastPoint.y);
+          ctx.restore();
+        }
+      }],
       options: {
         responsive: true, maintainAspectRatio: false,
+        layout: { padding: { right: 56 } },
         plugins: { legend: { position: 'top', labels: { boxWidth: 8, usePointStyle: true, pointStyle: 'circle', font: { size: 11 } } } },
         scales: {
           x: { ticks: { autoSkip: false, maxRotation: 70, minRotation: 40, font: { size: 10 } } },
