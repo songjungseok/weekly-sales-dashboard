@@ -494,7 +494,7 @@
     <div id="page4" class="page-content">
       <div class="page-eyebrow">VEHICLE REVENUE MANAGEMENT</div>
       <h1>🚗 차량별 매출관리</h1>
-      <div class="sub">차량번호 기준 월별 매출 · BEP(손익분기 매출) 달성 현황입니다. (편도/리턴프리 예약 데이터는 아직 없어 왕복 매출 기준으로만 표시됩니다.)</div>
+      <div class="sub">차량번호 기준 월별 매출(왕복 카셰어링 + 편도 리턴프리) · BEP(손익분기 매출) 달성 현황입니다.</div>
 
       <div class="section">
         <div style="display:flex; flex-wrap:wrap; align-items:center; gap:16px; margin-bottom:12px;">
@@ -523,7 +523,6 @@
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="font-size:12.5px; color:#666;">저매출 기준</span>
             <input type="range" id="vehLowPctSlider" min="5" max="50" step="5" value="20" style="width:110px; vertical-align:middle;">
-            <span id="vehLowPctLabel" style="font-size:12px; color:#A32D2D; font-weight:700;">하위 20%</span>
           </div>
         </div>
         <div id="vehLowPctDesc" style="font-size:12px; color:#A32D2D; font-weight:600;"></div>
@@ -549,21 +548,43 @@
             </span>
           </span>
         </h2>
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 주차 기준: 월요일~일요일 · VAT 제외</div>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 주차 기준: 월요일~일요일 · VAT 제외 · 상단 전체/왕복전용/혼용 탭 기준으로 집계</div>
         <div class="chart-box" style="height:340px;"><canvas id="chartVehTrend"></canvas></div>
       </div>
 
       <div class="section">
+        <h2>🔀 왕복매출 / 편도매출 구성</h2>
+        <div style="display:flex; align-items:center; gap:14px; font-size:12.5px; margin-bottom:10px;">
+          <span style="display:flex; align-items:center; gap:5px;"><span style="width:11px; height:11px; background:#1B2A4A; display:inline-block; border-radius:2px;"></span>왕복매출(카셰어링)</span>
+          <span style="display:flex; align-items:center; gap:5px;"><span style="width:11px; height:11px; background:#d0346f; display:inline-block; border-radius:2px;"></span>편도매출(리턴프리)</span>
+        </div>
+        <div id="vehCompositionBar" style="display:flex; width:100%; height:22px; border-radius:3px; overflow:hidden; background:#eee;"></div>
+        <div id="vehCompositionLabels" style="display:flex; justify-content:space-between; font-size:12.5px; color:#555; margin-top:8px;"></div>
+      </div>
+
+      <div class="section">
+        <h2>📶 차량별 매출 분포</h2>
+        <div style="display:flex; align-items:center; gap:14px; font-size:12px; margin-bottom:6px;">
+          <span style="display:flex; align-items:center; gap:5px;"><span style="width:11px; height:11px; background:#d0342c; display:inline-block; border-radius:2px;"></span>저매출 구간</span>
+          <span style="display:flex; align-items:center; gap:5px;"><span style="width:11px; height:11px; background:#1B2A4A; display:inline-block; border-radius:2px;"></span>일반 구간</span>
+        </div>
+        <div class="chart-box" style="height:280px;"><canvas id="chartVehDist"></canvas></div>
+      </div>
+
+      <div class="section">
         <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-          <span>🚘 차종별 현황</span>
+          <span>🚘 차종별 현황 (왕복/편도/합계)</span>
           <button type="button" id="vehCarTypeCsvBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">CSV 다운로드</button>
         </h2>
+        <div style="font-size:11.5px; color:#888; margin-bottom:8px;" id="vehCarTypeCount"></div>
         <div style="overflow-x:auto;">
           <table id="vehCarTypeTable" style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead><tr>
               <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차종명</th>
               <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">차량수</th>
-              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">대당매출</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">왕복매출(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">편도매출(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">합계매출(대당)</th>
               <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">총매출(VAT제외)</th>
               <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">매출비중</th>
               <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">저매출차량비중</th>
@@ -571,16 +592,72 @@
             <tbody></tbody>
           </table>
         </div>
+        <div style="text-align:center; margin-top:8px;"><button type="button" id="vehCarTypeMoreBtn" class="def-toggle-btn" style="background:#fff; color:#1a2b3c; border-color:#d5dbe1; box-shadow:none;"></button></div>
       </div>
 
       <div class="section">
-        <h2>📊 차종별 BEP 달성률 <span style="font-size:11px; color:#888; font-weight:400;">(상위 20개 차종, 차량수 3대 이상)</span></h2>
-        <div class="chart-box" style="height:360px;"><canvas id="chartVehCarTypeBep"></canvas></div>
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>📊 차종별 BEP 달성률 <span style="font-size:11px; color:#888; font-weight:400;">(합계매출 ÷ BEP)</span></span>
+          <span style="display:flex; align-items:center; gap:8px; font-size:12px;">
+            <span style="color:#666;">최소 차량 수</span>
+            <input type="number" id="vehBepMinCount" value="3" min="0" style="width:52px; padding:3px 6px; border:1.5px solid #d5dbe1;">
+            <span style="color:#666;">대 이상</span>
+          </span>
+        </h2>
+        <span class="tab-bar" id="vehBepTabBar" style="margin-bottom:10px;">
+          <button type="button" class="tab-btn active" data-bep="all">전체</button>
+          <button type="button" class="tab-btn" data-bep="achieved">달성</button>
+          <button type="button" class="tab-btn" data-bep="notachieved">미달성</button>
+          <button type="button" class="tab-btn" data-bep="unknown">기타(BEP미등록)</button>
+        </span>
+        <div style="font-size:11px; color:#888; margin-bottom:6px;">
+          <span style="display:inline-flex; align-items:center; gap:4px; margin-right:10px;"><span style="width:10px;height:10px;background:#1B2A4A;display:inline-block;border-radius:2px;"></span>왕복</span>
+          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#d0346f;display:inline-block;border-radius:2px;"></span>편도</span>
+          · 게이지 길이 = 달성률(%)
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="vehBepTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차종명</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">차량수</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd; min-width:110px;">달성도</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">왕복(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">편도(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">합계(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">BEP</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">달성률</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">가동률</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div style="font-size:11px; color:#888; margin-top:8px;">* 모든 매출은 VAT 제외 · BEP는 별도 기준(VAT 제외) · 달성률 = 합계매출 ÷ BEP · 가동률 = 운행시간 ÷ (차량수 × 조회기간 × 24h) × 100</div>
       </div>
 
       <div class="section">
         <h2>🚙 차량유형별 대당매출 &amp; BEP 달성</h2>
-        <div class="chart-box" style="height:360px;"><canvas id="chartVehVtypeBep"></canvas></div>
+        <div style="font-size:11px; color:#888; margin-bottom:6px;">
+          <span style="display:inline-flex; align-items:center; gap:4px; margin-right:10px;"><span style="width:10px;height:10px;background:#1B2A4A;display:inline-block;border-radius:2px;"></span>왕복</span>
+          <span style="display:inline-flex; align-items:center; gap:4px;"><span style="width:10px;height:10px;background:#d0346f;display:inline-block;border-radius:2px;"></span>편도</span>
+          · 게이지 길이 = 달성률(%)
+        </div>
+        <div style="overflow-x:auto;">
+          <table id="vehVtypeTable" style="width:100%; border-collapse:collapse; font-size:13px;">
+            <thead><tr>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차량유형</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">차량수</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd; min-width:110px;">달성률 게이지</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">왕복(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">편도(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">합계(대당)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">가중평균BEP</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">달성률</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">총매출(VAT제외)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">매출비중</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </div>
 
       <div class="section">
@@ -588,15 +665,18 @@
           <span>🔻 저매출 차량 추출 <span id="vehLowCount" style="color:#A32D2D; font-weight:700;"></span></span>
           <button type="button" id="vehLowCsvBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">CSV 다운로드</button>
         </h2>
-        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 최대 300대까지 표시 · CSV 다운로드는 전체 포함 · 운영형태: 편도 이력 있으면 혼용(현재 데이터 기준 전량 왕복전용)</div>
+        <div style="font-size:11px; color:#888; margin-bottom:4px;">* 최대 300대까지 표시 · CSV 다운로드는 전체 포함 · 운영형태: 편도 이력이 있으면 혼용, 편도 이력만 있으면 편도전용</div>
         <div style="overflow-x:auto;">
           <table id="vehLowTable" style="width:100%; border-collapse:collapse; font-size:13px;">
             <thead><tr>
               <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차량번호</th>
               <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차종명</th>
               <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">차량유형</th>
+              <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">운영형태</th>
               <th style="text-align:left; padding:8px 10px; border-bottom:1px solid #ddd;">지역</th>
-              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">매출(VAT제외)</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">왕복매출</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">편도매출</th>
+              <th style="text-align:right; padding:8px 10px; border-bottom:1px solid #ddd;">합계(VAT제외)</th>
               <th style="text-align:center; padding:8px 10px; border-bottom:1px solid #ddd;">매출등급</th>
             </tr></thead>
             <tbody></tbody>
@@ -604,10 +684,6 @@
         </div>
       </div>
     </div>
-
-  </div>
-</div>
-
 <script>
   document.querySelectorAll('.sidebar-item').forEach(function(item){
     item.addEventListener('click', function(){
@@ -3074,11 +3150,20 @@
   let vehTrendGran = 'week';
   let vehTrendMetric = 'rev';
   let vehTrendYears = [];
+  let vehBepTab = 'all';
+  let vehBepMinCount = 3;
+  let vehCarTypeExpanded = false;
+  const VEH_CARTYPE_SHOW = 10;
   const vehCharts = {};
 
   function fmtNum(v, dec){
     if (v==null || isNaN(v)) return '—';
     return Number(v).toLocaleString('ko-KR', {maximumFractionDigits: dec==null?0:dec});
+  }
+
+  function daysInMonth(monthKey){
+    const [y,m] = monthKey.split('-').map(Number);
+    return new Date(y, m, 0).getDate();
   }
 
   function downloadCsv(filename, rows){
@@ -3190,6 +3275,12 @@
     return n ? Math.round(sumBep / n) : null;
   }
 
+  function operationType(v){
+    if (v.onewayTotal > 0 && v.roundTotal <= 0) return '편도전용';
+    if (v.isMix) return '혼용';
+    return '왕복전용';
+  }
+
   function renderAll(){
     const vehicles = currentVehicles();
     const threshold = computeThreshold(vehicles, vehLowPct);
@@ -3198,11 +3289,13 @@
     const descEl = document.getElementById('vehLowPctDesc');
     if (descEl) descEl.textContent = threshold!=null ? `하위 ${vehLowPct}% (${fmtNum(threshold)}원 이하)` : '';
     renderKpis(vehicles, threshold);
+    renderComposition(vehicles);
+    renderDistChart(vehicles, threshold);
     renderCarTypeTable(vehicles, threshold);
+    renderBepTable(vehicles);
+    renderVtypeTable(vehicles);
     renderLowTable(vehicles, threshold);
     renderTrendChart();
-    renderCarTypeBepChart(vehicles);
-    renderVtypeBepChart(vehicles);
   }
 
   function renderKpis(vehicles, threshold){
@@ -3232,37 +3325,211 @@
       </div>`).join('');
   }
 
+  function renderComposition(vehicles){
+    const bar = document.getElementById('vehCompositionBar');
+    const labels = document.getElementById('vehCompositionLabels');
+    if (!bar || !labels) return;
+    const roundSum = vehicles.reduce((s,v)=>s+(v.roundTotal||0),0);
+    const onewaySum = vehicles.reduce((s,v)=>s+(v.onewayTotal||0),0);
+    const total = roundSum + onewaySum;
+    if (!total){ bar.innerHTML=''; labels.innerHTML=''; return; }
+    const roundPct = (roundSum/total*100);
+    const onewayPct = 100 - roundPct;
+    bar.innerHTML = `<div style="width:${roundPct}%; background:#1B2A4A;"></div><div style="width:${onewayPct}%; background:#d0346f;"></div>`;
+    labels.innerHTML = `<span>왕복매출 ${fmtNum(roundSum)}원 (${roundPct.toFixed(0)}%)</span><span>편도매출 ${fmtNum(onewaySum)}원 (${onewayPct.toFixed(0)}%)</span>`;
+  }
+
+  function renderDistChart(vehicles, threshold){
+    const el = document.getElementById('chartVehDist');
+    if (!el) return;
+    if (vehCharts.dist) vehCharts.dist.destroy();
+    if (!vehicles.length) return;
+    const max = Math.max(...vehicles.map(v=>v.total));
+    const binCount = 18;
+    const binSize = Math.max(1, Math.ceil(max / binCount / 10000) * 10000);
+    const bins = [];
+    for (let i=0; i*binSize <= max; i++) bins.push({from:i*binSize, to:(i+1)*binSize, count:0});
+    vehicles.forEach(v => {
+      let idx = Math.floor(v.total / binSize);
+      if (idx >= bins.length) idx = bins.length - 1;
+      if (idx < 0) idx = 0;
+      bins[idx].count++;
+    });
+    const labels = bins.map(b => `${Math.round(b.from/10000)}만`);
+    const data = bins.map(b => b.count);
+    const colors = bins.map(b => (threshold!=null && b.from <= threshold) ? '#d0342c' : '#1B2A4A');
+    vehCharts.dist = new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: { labels, datasets: [{ label:'차량 수', data, backgroundColor: colors, categoryPercentage:0.95, barPercentage:1 }] },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display:false } },
+        scales: { x: { ticks:{ font:{size:10} } }, y: { beginAtZero:true, title:{display:true, text:'차량 수'} } }
+      }
+    });
+  }
+
   function groupByCarType(vehicles){
     const map = {};
     vehicles.forEach(v => {
-      if (!map[v.carType]) map[v.carType] = { carType: v.carType, count:0, total:0, low:0 };
-      map[v.carType].count++;
-      map[v.carType].total += v.total;
+      if (!map[v.carType]) map[v.carType] = { carType: v.carType, count:0, roundTotal:0, onewayTotal:0, total:0, low:0, hours:0 };
+      const g = map[v.carType];
+      g.count++;
+      g.roundTotal += (v.roundTotal||0);
+      g.onewayTotal += (v.onewayTotal||0);
+      g.total += v.total;
+      g.hours += (v.opHours||0) + (v.owHours||0);
     });
     return map;
   }
 
+  function groupByVtype(vehicles){
+    const map = {};
+    vehicles.forEach(v => {
+      if (!v.vtype) return;
+      if (!map[v.vtype]) map[v.vtype] = { vtype:v.vtype, count:0, roundTotal:0, onewayTotal:0, total:0, carTypes:new Set() };
+      const g = map[v.vtype];
+      g.count++;
+      g.roundTotal += (v.roundTotal||0);
+      g.onewayTotal += (v.onewayTotal||0);
+      g.total += v.total;
+      if (v.carType) g.carTypes.add(v.carType);
+    });
+    return map;
+  }
+
+  function gaugeBarHtml(round, oneway, achieve){
+    const total = round + oneway;
+    const filled = achieve==null ? 0 : Math.max(0, Math.min(100, achieve));
+    const roundShare = total ? (round/total)*filled : filled;
+    const onewayShare = total ? (oneway/total)*filled : 0;
+    return `<div style="position:relative; width:100%; min-width:90px; height:8px; background:#eee; border-radius:4px; overflow:hidden; display:flex;">
+      <div style="width:${roundShare}%; background:#1B2A4A;"></div>
+      <div style="width:${onewayShare}%; background:#d0346f;"></div>
+    </div>`;
+  }
+
   function renderCarTypeTable(vehicles, threshold){
     const tbody = document.querySelector('#vehCarTypeTable tbody');
+    const countEl = document.getElementById('vehCarTypeCount');
+    const moreBtn = document.getElementById('vehCarTypeMoreBtn');
     if (!tbody) return;
     const map = groupByCarType(vehicles);
     if (threshold!=null){
       vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
     }
     const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
-    const groups = Object.values(map).sort((a,b)=>b.total-a.total);
-    if (!groups.length){ tbody.innerHTML = '<tr><td colspan="6" style="padding:12px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>'; return; }
-    tbody.innerHTML = groups.map(g => {
-      const avg = Math.round(g.total/g.count);
+    const groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count}))
+      .sort((a,b)=>a.avg-b.avg);
+    if (countEl) countEl.textContent = `전체 ${vehicles.length}대 · ${groups.length}개 차종 기준`;
+    if (!groups.length){
+      tbody.innerHTML = '<tr><td colspan="8" style="padding:12px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
+      if (moreBtn) moreBtn.style.display = 'none';
+      return;
+    }
+    const shown = vehCarTypeExpanded ? groups : groups.slice(0, VEH_CARTYPE_SHOW);
+    tbody.innerHTML = shown.map(g => {
       const share = grandTotal ? (g.total/grandTotal*100).toFixed(1) : '0.0';
       const lowShare = g.count ? (g.low/g.count*100).toFixed(1) : '0.0';
       return `<tr>
         <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:left;">${g.carType||'—'}</td>
-        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.count)}</td>
-        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(avg)}</td>
-        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.total)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.count)}대</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.roundAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.onewayAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:700;">${fmtNum(g.avg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.total)}원</td>
         <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${share}%</td>
-        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${g.low>0?'#A32D2D':'#999'};">${lowShare}%</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${g.low>0?'#A32D2D':'#999'};">${fmtNum(g.low)}대 (${lowShare}%)</td>
+      </tr>`;
+    }).join('');
+    if (moreBtn){
+      if (groups.length <= VEH_CARTYPE_SHOW){
+        moreBtn.style.display = 'none';
+      } else {
+        moreBtn.style.display = '';
+        moreBtn.textContent = vehCarTypeExpanded ? '접기' : `더보기 (${groups.length}개)`;
+      }
+    }
+  }
+
+  function renderBepTable(vehicles){
+    const tbody = document.querySelector('#vehBepTable tbody');
+    const tabBar = document.getElementById('vehBepTabBar');
+    if (!tbody) return;
+    const map = groupByCarType(vehicles);
+    const days = daysInMonth(vehSelectedMonth);
+    let groups = Object.values(map).filter(g => g.count >= vehBepMinCount).map(g => {
+      const bep = vehBepMap[g.carType] || null;
+      const avg = g.total / g.count;
+      const achieve = bep ? Math.round(avg/bep*1000)/10 : null;
+      const utilization = days ? Math.round(g.hours / (g.count*days*24) * 1000)/10 : null;
+      const category = bep==null ? 'unknown' : (achieve>=100 ? 'achieved' : 'notachieved');
+      return { ...g, avg, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count, bep, achieve, utilization, category };
+    });
+    const counts = { all: groups.length, achieved: groups.filter(g=>g.category==='achieved').length,
+      notachieved: groups.filter(g=>g.category==='notachieved').length, unknown: groups.filter(g=>g.category==='unknown').length };
+    if (tabBar){
+      tabBar.querySelectorAll('.tab-btn').forEach(btn => {
+        const key = btn.dataset.bep;
+        const label = key==='all' ? '전체' : key==='achieved' ? '달성' : key==='notachieved' ? '미달성' : '기타(BEP미등록)';
+        btn.textContent = `${label} ${counts[key]}`;
+      });
+    }
+    if (vehBepTab !== 'all') groups = groups.filter(g => g.category === vehBepTab);
+    groups.sort((a,b) => {
+      if (a.achieve==null && b.achieve==null) return b.count - a.count;
+      if (a.achieve==null) return 1;
+      if (b.achieve==null) return -1;
+      return a.achieve - b.achieve;
+    });
+    if (!groups.length){ tbody.innerHTML = '<tr><td colspan="9" style="padding:12px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>'; return; }
+    tbody.innerHTML = groups.map(g => {
+      const achieveTxt = g.achieve==null ? '—' : `${g.achieve<100?'✕':'✓'} ${g.achieve}%`;
+      const achieveColor = g.achieve==null ? '#999' : (g.achieve<100 ? '#c0392b' : '#2e7d32');
+      return `<tr>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:left;">${g.carType||'—'}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.count)}대</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee;">${gaugeBarHtml(g.roundAvg, g.onewayAvg, g.achieve)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.roundAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.onewayAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:700;">${fmtNum(g.avg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${g.bep!=null?fmtNum(g.bep)+'원':'—'}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${achieveColor}; font-weight:700;">${achieveTxt}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${g.utilization!=null?g.utilization+'%':'—'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  function renderVtypeTable(vehicles){
+    const tbody = document.querySelector('#vehVtypeTable tbody');
+    if (!tbody) return;
+    const map = groupByVtype(vehicles);
+    const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
+    const groups = Object.values(map).map(g => {
+      const avg = g.total / g.count;
+      const bepVals = Array.from(g.carTypes).map(ct => vehBepMap[ct]).filter(Boolean);
+      const bep = bepVals.length ? Math.round(bepVals.reduce((s,v)=>s+v,0)/bepVals.length) : null;
+      const achieve = bep ? Math.round(avg/bep*1000)/10 : null;
+      return { vtype:g.vtype, count:g.count, roundAvg:g.roundTotal/g.count, onewayAvg:g.onewayTotal/g.count, avg, bep, achieve, total:g.total };
+    }).sort((a,b)=>b.total-a.total);
+    if (!groups.length){ tbody.innerHTML = '<tr><td colspan="10" style="padding:12px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>'; return; }
+    const maxCount = Math.max(...groups.map(g=>g.count));
+    tbody.innerHTML = groups.map(g => {
+      const achieveTxt = g.achieve==null ? '—' : `${g.achieve<100?'✕':'✓'} ${g.achieve}%`;
+      const achieveColor = g.achieve==null ? '#999' : (g.achieve<100 ? '#c0392b' : '#2e7d32');
+      const share = grandTotal ? (g.total/grandTotal*100).toFixed(1) : '0.0';
+      const highlight = g.count===maxCount ? 'background:#fdf3e3;' : '';
+      return `<tr style="${highlight}">
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:left; font-weight:700;">${g.vtype}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.count)}대</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee;">${gaugeBarHtml(g.roundAvg, g.onewayAvg, g.achieve)}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.roundAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.onewayAvg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:700;">${fmtNum(g.avg)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:#999;">${g.bep!=null?fmtNum(g.bep)+'원':'—'}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${achieveColor}; font-weight:700;">${achieveTxt}</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(g.total)}원</td>
+        <td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right; color:${g.vtype && share>10 ? '#1B2A4A':'#666'};">${share}%</td>
       </tr>`;
     }).join('');
   }
@@ -3280,67 +3547,13 @@
         <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.plate}</td>
         <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.carType||'—'}</td>
         <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.vtype||'—'}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee;">${operationType(v)}</td>
         <td style="padding:6px 10px; border-bottom:1px solid #eee;">${v.region||'—'}</td>
-        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(v.total)}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(v.roundTotal)}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right;">${fmtNum(v.onewayTotal)}</td>
+        <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:right; font-weight:700;">${fmtNum(v.total)}</td>
         <td style="padding:6px 10px; border-bottom:1px solid #eee; text-align:center;"><span style="background:#FCEBEB; color:#A32D2D; border-radius:3px; padding:2px 8px; font-size:11.5px; font-weight:600;">저매출</span></td>
-      </tr>`).join('') : '<tr><td colspan="6" style="padding:12px; text-align:center; color:#999;">저매출 차량이 없습니다.</td></tr>';
-  }
-
-  function renderCarTypeBepChart(vehicles){
-    const el = document.getElementById('chartVehCarTypeBep');
-    if (!el) return;
-    if (vehCharts.carTypeBep) vehCharts.carTypeBep.destroy();
-    const map = groupByCarType(vehicles);
-    const groups = Object.values(map).filter(g=>g.count>=3 && vehBepMap[g.carType]);
-    groups.forEach(g => { g.avg = g.total/g.count; g.bep = vehBepMap[g.carType]; g.achieve = Math.round(g.avg/g.bep*1000)/10; });
-    groups.sort((a,b)=>b.count-a.count);
-    const top = groups.slice(0,20).sort((a,b)=>b.achieve-a.achieve);
-    if (!top.length) return;
-    const labels = top.map(g=>g.carType);
-    const data = top.map(g=>g.achieve);
-    const colors = data.map(v => v<100 ? '#d0342c' : '#1B2A4A');
-    vehCharts.carTypeBep = new Chart(el.getContext('2d'), {
-      type: 'bar',
-      data: { labels, datasets: [{ label:'BEP 달성률(%)', data, backgroundColor: colors }] },
-      options: {
-        indexAxis: 'y',
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display:false } },
-        scales: { x: { ticks: { callback: v => v+'%' } }, y: { ticks: { font:{size:10.5} } } }
-      }
-    });
-  }
-
-  function renderVtypeBepChart(vehicles){
-    const el = document.getElementById('chartVehVtypeBep');
-    if (!el) return;
-    if (vehCharts.vtypeBep) vehCharts.vtypeBep.destroy();
-    const map = {};
-    vehicles.forEach(v => {
-      if (!map[v.vtype]) map[v.vtype] = { vtype:v.vtype, count:0, total:0, bepSum:0, bepN:0 };
-      map[v.vtype].count++; map[v.vtype].total += v.total;
-      const bep = vehBepMap[v.carType];
-      if (bep){ map[v.vtype].bepSum += bep; map[v.vtype].bepN++; }
-    });
-    const groups = Object.values(map).filter(g=>g.vtype).map(g => ({
-      vtype: g.vtype, avg: Math.round(g.total/g.count), bep: g.bepN ? Math.round(g.bepSum/g.bepN) : null
-    })).sort((a,b)=>b.avg-a.avg);
-    if (!groups.length) return;
-    const labels = groups.map(g=>g.vtype);
-    vehCharts.vtypeBep = new Chart(el.getContext('2d'), {
-      data: {
-        labels,
-        datasets: [
-          { type:'bar', label:'대당매출', data: groups.map(g=>g.avg), backgroundColor:'#1B2A4A', order:2 },
-          { type:'line', label:'BEP', data: groups.map(g=>g.bep), borderColor:'#e9a23b', borderDash:[6,4], borderWidth:2, pointRadius:2, fill:false, order:1 }
-        ]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
-        scales: { x: { ticks:{ font:{size:10.5} } }, y: { beginAtZero:true, ticks:{ callback: v=>v.toLocaleString('ko-KR') } } }
-      }
-    });
+      </tr>`).join('') : '<tr><td colspan="9" style="padding:12px; text-align:center; color:#999;">저매출 차량이 없습니다.</td></tr>';
   }
 
   function renderTrendYearChecks(){
@@ -3362,7 +3575,8 @@
     const el = document.getElementById('chartVehTrend');
     if (!el || !vehData) return;
     if (vehCharts.trend) vehCharts.trend.destroy();
-    const src = vehTrendGran==='week' ? (vehData.weekly.all||[]) : (vehData.monthly.all||[]);
+    const bucketKey = vehTypeFilter; // 'all' | 'round' | 'mix'
+    const src = vehTrendGran==='week' ? (vehData.weekly[bucketKey]||[]) : (vehData.monthly[bucketKey]||[]);
     const filtered = src.filter(r => vehTrendYears.includes(r.year)).slice().sort((a,b) => {
       if (vehTrendGran==='week') return (a.year-b.year) || (a.week-b.week);
       return (a.year-b.year) || (a.month-b.month);
@@ -3395,11 +3609,11 @@
     const map = groupByCarType(vehicles);
     if (threshold!=null) vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
     const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
-    const groups = Object.values(map).sort((a,b)=>b.total-a.total);
-    const rows = [['차종명','차량수','대당매출','총매출(VAT제외)','매출비중(%)','저매출차량비중(%)']];
+    const groups = Object.values(map).sort((a,b)=>(a.total/a.count)-(b.total/b.count));
+    const rows = [['차종명','차량수','왕복매출(대당)','편도매출(대당)','합계매출(대당)','총매출(VAT제외)','매출비중(%)','저매출차량수','저매출차량비중(%)']];
     groups.forEach(g => {
-      rows.push([g.carType, g.count, Math.round(g.total/g.count), g.total,
-        grandTotal?(g.total/grandTotal*100).toFixed(1):'0.0', g.count?(g.low/g.count*100).toFixed(1):'0.0']);
+      rows.push([g.carType, g.count, Math.round(g.roundTotal/g.count), Math.round(g.onewayTotal/g.count), Math.round(g.total/g.count), g.total,
+        grandTotal?(g.total/grandTotal*100).toFixed(1):'0.0', g.low, g.count?(g.low/g.count*100).toFixed(1):'0.0']);
     });
     downloadCsv(`차종별현황_${vehSelectedMonth}.csv`, rows);
   }
@@ -3409,8 +3623,8 @@
     const threshold = computeThreshold(vehicles, vehLowPct);
     if (threshold==null) return;
     const low = vehicles.filter(v=>v.total<=threshold).sort((a,b)=>a.total-b.total);
-    const rows = [['차량번호','차종명','차량유형','지역','매출(VAT제외)','매출등급']];
-    low.forEach(v => rows.push([v.plate, v.carType, v.vtype, v.region, v.total, '저매출']));
+    const rows = [['차량번호','차종명','차량유형','운영형태','지역','왕복매출','편도매출','합계(VAT제외)','매출등급']];
+    low.forEach(v => rows.push([v.plate, v.carType, v.vtype, operationType(v), v.region, v.roundTotal, v.onewayTotal, v.total, '저매출']));
     downloadCsv(`저매출차량_${vehSelectedMonth}.csv`, rows);
   }
 
@@ -3451,7 +3665,6 @@
     const slider = document.getElementById('vehLowPctSlider');
     slider.addEventListener('input', () => {
       vehLowPct = parseInt(slider.value,10);
-      document.getElementById('vehLowPctLabel').textContent = `하위 ${vehLowPct}%`;
       renderAll();
     });
     document.querySelectorAll('#vehTrendGranBar .tab-btn').forEach(btn => {
@@ -3470,18 +3683,34 @@
         renderTrendChart();
       });
     });
+    document.querySelectorAll('#vehBepTabBar .tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#vehBepTabBar .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        vehBepTab = btn.dataset.bep;
+        renderBepTable(currentVehicles());
+      });
+    });
+    document.getElementById('vehBepMinCount').addEventListener('input', (e) => {
+      vehBepMinCount = parseInt(e.target.value,10) || 0;
+      renderBepTable(currentVehicles());
+    });
+    document.getElementById('vehCarTypeMoreBtn').addEventListener('click', () => {
+      vehCarTypeExpanded = !vehCarTypeExpanded;
+      const vehicles = currentVehicles();
+      renderCarTypeTable(vehicles, computeThreshold(vehicles, vehLowPct));
+    });
     document.getElementById('vehCarTypeCsvBtn').addEventListener('click', exportCarTypeCsv);
     document.getElementById('vehLowCsvBtn').addEventListener('click', exportLowCsv);
   }
 
   window.refreshPage4 = function(){
     if (!vehLoaded){ ensureVehData(); return; }
-    renderTrendChart();
-    renderCarTypeBepChart(currentVehicles());
-    renderVtypeBepChart(currentVehicles());
+    renderAll();
   };
 })();
 </script>
+
 
 
 </body>
