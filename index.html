@@ -3789,6 +3789,15 @@
         if (id==='vehRegionSelect') vehRegionFilter = e.target.value;
         if (id==='vehCarTypeSelect') vehCarTypeFilter = e.target.value;
         if (id==='vehVtypeSelect') vehVtypeFilter = e.target.value;
+        // 지역/차종/차량구분 필터는 주차별 트렌드 데이터에는 반영할 수 없으므로(주 단위 세부 데이터 없음),
+        // 필터가 켜진 상태에서 주차별을 보고 있었다면 자동으로 월별로 전환해 트렌드 그래프에 즉시 반영한다.
+        if ((vehRegionFilter || vehCarTypeFilter || vehVtypeFilter) && vehTrendGran === 'week'){
+          vehTrendGran = 'month';
+          const bar = document.getElementById('vehTrendGranBar');
+          if (bar){
+            bar.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.gran === 'month'));
+          }
+        }
         renderAll();
       });
     });
