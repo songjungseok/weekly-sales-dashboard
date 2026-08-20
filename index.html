@@ -427,15 +427,15 @@
                       <span id="partnerGroupDefCloseBtn" class="def-box-close">✕</span>
                     </div>
                     <div style="margin-bottom:10px;">
-                      <div class="def-box-label" style="color:#A32D2D;">수요부족형</div>
+                      <div class="def-box-label" style="color:#A32D2D;">수요부족형 <span style="color:#999; font-weight:400;">— 조치: 플릿인프라팀</span></div>
                       <div>대당건수 20%↓ 이상 &amp; 대당 이용시간 20%↓ 이상 — 예약 자체가 줄고 이용시간도 함께 줄어든 경우</div>
                     </div>
                     <div style="margin-bottom:10px;">
-                      <div class="def-box-label" style="color:#b06a00;">이용 질 저하형</div>
+                      <div class="def-box-label" style="color:#b06a00;">이용 질 저하형 <span style="color:#999; font-weight:400;">— 조치: 투루카 그로스팀</span></div>
                       <div>대당건수는 5%↓ 이내(거의 유지) &amp; 대당 이용시간 5%↓ 이상 — 예약 건수는 비슷한데 건당 이용시간이 짧아진 경우</div>
                     </div>
                     <div style="margin-bottom:10px;">
-                      <div class="def-box-label" style="color:#1B2A4A;">가격/구조 점검형</div>
+                      <div class="def-box-label" style="color:#1B2A4A;">가격/구조 점검형 <span style="color:#999; font-weight:400;">— 조치: 투루카 그로스팀</span></div>
                       <div>대당 이용시간 5%↓ 이내(거의 유지) — 이용 패턴은 안정적이라 가격·수수료·정산 구조 쪽 점검이 필요한 경우</div>
                     </div>
                     <div>
@@ -2796,9 +2796,9 @@
     if (!yoyCnt || !yoyHrs) return null;
     const cntPct = (curCnt - yoyCnt) / yoyCnt * 100;
     const hrsPct = (curHrs - yoyHrs) / yoyHrs * 100;
-    if (cntPct <= -20 && hrsPct <= -20) return { key:'demand', label:'수요부족형' };
-    if (cntPct > -5 && hrsPct <= -5) return { key:'quality', label:'이용 질 저하형' };
-    if (hrsPct > -5) return { key:'structure', label:'가격/구조 점검형' };
+    if (cntPct <= -20 && hrsPct <= -20) return { key:'demand', label:'수요부족형', team:'플릿인프라팀' };
+    if (cntPct > -5 && hrsPct <= -5) return { key:'quality', label:'이용 질 저하형', team:'투루카 그로스팀' };
+    if (hrsPct > -5) return { key:'structure', label:'가격/구조 점검형', team:'투루카 그로스팀' };
     return null;
   }
 
@@ -2835,7 +2835,7 @@
       <div class="alert-item" data-name="${e.name}">
         <div class="alert-item-bar"></div>
         <div class="alert-item-text">
-          <div class="alert-item-name">${e.name}${e.group ? `<span class="partner-group-badge ${e.group.key}">${e.group.label}</span>` : ''}</div>
+          <div class="alert-item-name">${e.name}${e.group ? `<span class="partner-group-badge ${e.group.key}" title="조치 담당: ${e.group.team}">${e.group.label} · ${e.group.team}</span>` : ''}</div>
           <div class="alert-item-sub">이번 주 ${fmtNum(Math.round(e.cur),0)}원 · 전년동기 ${fmtNum(Math.round(e.yoyVal),0)}원</div>
         </div>
         <div class="alert-item-link">${e.diffPct.toFixed(1)}% ›</div>
