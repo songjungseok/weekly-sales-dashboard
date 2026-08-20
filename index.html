@@ -237,7 +237,7 @@
   .partner-group-badge.demand { background:#fbe4e4; color:#A32D2D; border:1px solid #f3c6c6; }
   .partner-group-badge.quality { background:#fbedd8; color:#b06a00; border:1px solid #f2dcb2; }
   .partner-group-badge.structure { background:#e5eaf6; color:#1B2A4A; border:1px solid #cdd6ec; }
-  .partner-group-badge-team { font-weight:500; opacity:0.85; }
+  .partner-group-team-text { font-size:12px; color:#666; font-weight:500; margin-left:5px; vertical-align:middle; white-space:nowrap; }
   .year-cb-label { margin-right: 14px; font-weight: 600; font-size: 13px; color: #333; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
   .year-cb-label input { cursor: pointer; }
   .foot { text-align: center; color: #999; font-size: 11.5px; margin-top: 24px; }
@@ -2836,7 +2836,7 @@
       <div class="alert-item" data-name="${e.name}">
         <div class="alert-item-bar"></div>
         <div class="alert-item-text">
-          <div class="alert-item-name">${e.name}${e.group ? `<span class="partner-group-badge ${e.group.key}" title="조치 담당: ${e.group.team}">${e.group.label}<span class="partner-group-badge-team"> - ${e.group.team} 조치필요</span></span>` : ''}</div>
+          <div class="alert-item-name">${e.name}${e.group ? `<span class="partner-group-badge ${e.group.key}" title="조치 담당: ${e.group.team}">${e.group.label}</span><span class="partner-group-team-text"> - ${e.group.team} 조치필요</span>` : ''}</div>
           <div class="alert-item-sub">이번 주 ${fmtNum(Math.round(e.cur),0)}원 · 전년동기 ${fmtNum(Math.round(e.yoyVal),0)}원</div>
         </div>
         <div class="alert-item-link">${e.diffPct.toFixed(1)}% ›</div>
