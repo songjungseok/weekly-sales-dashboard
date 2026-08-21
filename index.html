@@ -429,7 +429,20 @@
               <div class="event-pricing-subtitle">조건부 고객 <span class="count-pill">1</span></div>
               <table class="event-coupon-table">
                 <thead><tr>
-                  <th>쿠폰명</th><th>쿠폰할인</th><th>쿠폰유형</th><th>시간조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th><th>발행조건</th>
+                  <th>쿠폰명</th><th>쿠폰할인</th><th>쿠폰유형</th><th>시간조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th>
+                  <th>
+                    <span style="position:relative; display:inline-block;">
+                      발행조건
+                      <button type="button" id="couponIssueDefToggleBtn" class="def-toggle-btn" style="font-size:9px; padding:1px 6px; margin-left:4px; vertical-align:middle;">ⓘ</button>
+                      <div id="couponIssueDefBox" class="def-box" style="width:230px; right:0; left:auto;">
+                        <div class="def-box-head">
+                          <span class="def-box-label" style="margin-bottom:0;">안내</span>
+                          <span id="couponIssueDefCloseBtn" class="def-box-close">✕</span>
+                        </div>
+                        <div>단순 조건만 기입, 추가적인 핏한 조건은 기입하지 않음</div>
+                      </div>
+                    </span>
+                  </th>
                 </tr></thead>
                 <tbody>
                   <tr>
@@ -3096,6 +3109,21 @@
     idleDefCloseBtnEl.addEventListener('click', () => {
       idleDefBoxEl.classList.remove('open');
       idleDefToggleBtnEl.textContent = 'ⓘ 기준보기';
+    });
+  }
+  const couponIssueDefToggleBtnEl = document.getElementById('couponIssueDefToggleBtn');
+  const couponIssueDefBoxEl = document.getElementById('couponIssueDefBox');
+  if (couponIssueDefToggleBtnEl && couponIssueDefBoxEl){
+    couponIssueDefToggleBtnEl.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      couponIssueDefBoxEl.classList.toggle('open');
+    });
+  }
+  const couponIssueDefCloseBtnEl = document.getElementById('couponIssueDefCloseBtn');
+  if (couponIssueDefCloseBtnEl){
+    couponIssueDefCloseBtnEl.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      couponIssueDefBoxEl.classList.remove('open');
     });
   }
 
