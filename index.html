@@ -388,26 +388,19 @@
       <div class="page-eyebrow">COUPON USAGE ANALYSIS</div>
       <h1>🎟️ 쿠폰별 사용량</h1>
       <div class="sub">전주 vs 이번 주 쿠폰 사용 현황입니다 (🆕 최근 3주 내 신규 쿠폰 포함). 주 선택은 '주간 실적' 페이지의 선택을 따릅니다.</div>
-      <div id="content2"></div>
-    </div>
 
-    <div id="page3" class="page-content">
-      <div class="embed-banner"><span>🔗 이 화면은 "제휴사별 현황" 공유 전용 링크입니다.</span></div>
-      <div class="page-eyebrow">PARTNER (차량소속) STATUS</div>
-      <h1>🤝 제휴사별 현황</h1>
-
-      <div class="section">
+      <div class="section event-pricing-widget">
         <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
           <span>🎯 운영중 이벤트 프라이싱</span>
           <span style="font-size:12px; font-weight:500; color:#999;">보상 및 경품, 영업용지류 제외</span>
         </h2>
-        <span class="tab-bar" id="eventPricingTabBar">
+        <span class="tab-bar">
           <button type="button" class="tab-btn active" data-etab="coupon">쿠폰</button>
           <button type="button" class="tab-btn" data-etab="pricing">프라이싱</button>
           <button type="button" class="tab-btn" data-etab="partnership">제휴</button>
         </span>
 
-        <div id="eventPricingPanel-coupon" class="event-pricing-panel active">
+        <div class="event-pricing-panel active" data-epanel="coupon">
           <div class="event-pricing-subgrid">
             <div class="event-pricing-subbox">
               <div class="event-pricing-subtitle">모든고객 <span class="count-pill">6</span></div>
@@ -475,11 +468,11 @@
                   <th>
                     <span style="position:relative; display:inline-block;">
                       발행조건
-                      <button type="button" id="couponIssueDefToggleBtn" class="def-toggle-btn" style="font-size:9px; padding:1px 6px; margin-left:4px; vertical-align:middle;">ⓘ</button>
-                      <div id="couponIssueDefBox" class="def-box" style="width:230px; right:0; left:auto;">
+                      <button type="button" class="def-toggle-btn coupon-issue-def-toggle" style="font-size:9px; padding:1px 6px; margin-left:4px; vertical-align:middle;">ⓘ</button>
+                      <div class="def-box coupon-issue-def-box" style="width:230px; right:0; left:auto;">
                         <div class="def-box-head">
                           <span class="def-box-label" style="margin-bottom:0;">안내</span>
-                          <span id="couponIssueDefCloseBtn" class="def-box-close">✕</span>
+                          <span class="def-box-close coupon-issue-def-close">✕</span>
                         </div>
                         <div>단순 조건만 기입, 추가적인 핏한 조건은 기입하지 않음</div>
                       </div>
@@ -574,7 +567,7 @@
           </div>
         </div>
 
-        <div id="eventPricingPanel-pricing" class="event-pricing-panel">
+        <div class="event-pricing-panel" data-epanel="pricing">
           <div class="event-pricing-subgrid">
             <div class="event-pricing-subbox">
               <div class="event-pricing-subtitle">상시 <span class="count-pill">4</span></div>
@@ -634,7 +627,360 @@
           </div>
         </div>
 
-        <div id="eventPricingPanel-partnership" class="event-pricing-panel">
+        <div class="event-pricing-panel" data-epanel="partnership">
+          <div class="event-pricing-subgrid">
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">상시 <span class="count-pill">8</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>쿠폰명</th><th>쿠폰유형</th><th>시간/금액조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th><th>발행조건</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">SRTPLAY 5천원</td>
+                    <td>금액권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>STY 결합상품 구매</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">SRTPLAY 1만원</td>
+                    <td>금액권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>STY 결합상품 구매</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">SRTPLAY 3만원</td>
+                    <td>금액권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>STY 결합상품 구매</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">SRTPLAY 5만원</td>
+                    <td>금액권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>STY 결합상품 구매</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">어바웃 50%</td>
+                    <td>할인권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>~26.12.31</td>
+                    <td>어바웃APP 회원 직접다운</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">유플투쁠 9천원할인</td>
+                    <td>금액권</td>
+                    <td>6시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>LG멤버십 어플 고객 직접다운</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">유플투쁠 1.2만원할인</td>
+                    <td>금액권</td>
+                    <td>6시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>LG멤버십 어플 고객 직접다운</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">유플투쁠 1.6만원할인</td>
+                    <td>금액권</td>
+                    <td>6시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>LG멤버십 어플 고객 직접다운</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">이벤트성 <span class="count-pill">1</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>쿠폰명</th><th>쿠폰유형</th><th>시간/금액조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th><th>발행조건</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">T멤버십 70%</td>
+                    <td>할인권</td>
+                    <td>24시간~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>26.09.07~26.10.11</td>
+                    <td>SKT T-DAY 고객 직접다운</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="content2"></div>
+    </div>
+
+    <div id="page3" class="page-content">
+      <div class="embed-banner"><span>🔗 이 화면은 "제휴사별 현황" 공유 전용 링크입니다.</span></div>
+      <div class="page-eyebrow">PARTNER (차량소속) STATUS</div>
+      <h1>🤝 제휴사별 현황</h1>
+
+      <div class="section event-pricing-widget">
+        <h2 style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+          <span>🎯 운영중 이벤트 프라이싱</span>
+          <span style="font-size:12px; font-weight:500; color:#999;">보상 및 경품, 영업용지류 제외</span>
+        </h2>
+        <span class="tab-bar">
+          <button type="button" class="tab-btn active" data-etab="coupon">쿠폰</button>
+          <button type="button" class="tab-btn" data-etab="pricing">프라이싱</button>
+          <button type="button" class="tab-btn" data-etab="partnership">제휴</button>
+        </span>
+
+        <div class="event-pricing-panel active" data-epanel="coupon">
+          <div class="event-pricing-subgrid">
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">모든고객 <span class="count-pill">6</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>쿠폰명</th><th>쿠폰유형</th><th>시간조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">올패스 40%</td>
+                    <td>할인권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[1박2일~] 50%</td>
+                    <td>할인권</td>
+                    <td>34시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[2박3일] 109,000원</td>
+                    <td>고정금액권</td>
+                    <td>48~72시간</td>
+                    <td>전기차</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[주중] 한정특가 19,900원</td>
+                    <td>고정금액권</td>
+                    <td>~24시간미만</td>
+                    <td>경형~소형SUV</td>
+                    <td>제한X</td>
+                    <td>비수기상시(성수기 비상운영중)</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[1일] 40,000원</td>
+                    <td>고정금액권</td>
+                    <td>~24시간이하</td>
+                    <td>블랙존</td>
+                    <td>제한X</td>
+                    <td>7/17~8/23</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[2일] 57,000원</td>
+                    <td>고정금액권</td>
+                    <td>24~48시간</td>
+                    <td>일반존/할인존</td>
+                    <td>제한X</td>
+                    <td>7/17~8/23</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">조건부 고객 <span class="count-pill">9</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>쿠폰명</th><th>쿠폰유형</th><th>시간조건</th><th>차종/스팟조건</th><th>최대할인금액</th><th>유효기간</th>
+                  <th>
+                    <span style="position:relative; display:inline-block;">
+                      발행조건
+                      <button type="button" class="def-toggle-btn coupon-issue-def-toggle" style="font-size:9px; padding:1px 6px; margin-left:4px; vertical-align:middle;">ⓘ</button>
+                      <div class="def-box coupon-issue-def-box" style="width:230px; right:0; left:auto;">
+                        <div class="def-box-head">
+                          <span class="def-box-label" style="margin-bottom:0;">안내</span>
+                          <span class="def-box-close coupon-issue-def-close">✕</span>
+                        </div>
+                        <div>단순 조건만 기입, 추가적인 핏한 조건은 기입하지 않음</div>
+                      </div>
+                    </span>
+                  </th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">[당일특가] 4시간 7,900원</td>
+                    <td>고정금액권</td>
+                    <td>~4시간미만</td>
+                    <td>경형~중형SUV</td>
+                    <td>제한X</td>
+                    <td>당일</td>
+                    <td>예약결제페이지 진입 후 이탈 30분뒤 발행</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[첫이용감사] 45%</td>
+                    <td>할인권</td>
+                    <td>3시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>가입설문 단기이용 선택 + 1회 반납완료 시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[첫이용감사] 50%</td>
+                    <td>할인권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>가입설문 장기이용 선택 + 1회 반납완료 시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[첫이용] 5시간무료</td>
+                    <td>시간권</td>
+                    <td>조건X</td>
+                    <td>경형~중형SUV</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>가입 후 미이용 121일째 발행</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[생일] 2시간무료</td>
+                    <td>시간권</td>
+                    <td>4시간이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>생일당일 발행</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">VIP 1만원 할인</td>
+                    <td>금액권</td>
+                    <td>2만원이상~</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>매월1일~31일</td>
+                    <td>전월 30만원이상 결제고객</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">VIP 24시간 무료</td>
+                    <td>시간권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>매월1일~31일</td>
+                    <td>전월 30만원이상 결제고객</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">신규가입쿠폰</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>-</td>
+                    <td>조건변경 기획중</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[친구초대] 1만원할인</td>
+                    <td>금액권</td>
+                    <td>조건X</td>
+                    <td>조건X</td>
+                    <td>제한X</td>
+                    <td>상시</td>
+                    <td>추천인등록 가입자+추천자 발행</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-pricing-panel" data-epanel="pricing">
+          <div class="event-pricing-subgrid">
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">상시 <span class="count-pill">4</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>제목</th><th>차종대상</th><th>조건</th><th>노출가(원가) 할인률</th><th>유효기간</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">심야할인</td>
+                    <td>전차종</td>
+                    <td>00시~06시</td>
+                    <td>50%</td>
+                    <td>상시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">차종특별할인</td>
+                    <td>저매출차종(매월 변경)</td>
+                    <td>X</td>
+                    <td>20%</td>
+                    <td>월단위</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">세이브카</td>
+                    <td>4년초과 차량</td>
+                    <td>X</td>
+                    <td>상한요금 10배→6배</td>
+                    <td>상시</td>
+                  </tr>
+                  <tr>
+                    <td class="coupon-name">[이벤트존 - 할인존]</td>
+                    <td>플릿인프라팀 내부기준</td>
+                    <td>X</td>
+                    <td>15%</td>
+                    <td>월단위</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="event-pricing-subbox">
+              <div class="event-pricing-subtitle">이벤트성 <span class="count-pill">1</span></div>
+              <table class="event-coupon-table">
+                <thead><tr>
+                  <th>제목</th><th>차종대상</th><th>조건</th><th>노출가(원가) 할인률</th><th>유효기간</th>
+                </tr></thead>
+                <tbody>
+                  <tr>
+                    <td class="coupon-name">당일 덤핑전략 할인</td>
+                    <td>당일 저가동 차종</td>
+                    <td>15시~24시</td>
+                    <td>20%</td>
+                    <td>8/18~ 미정(매주 화,수,목)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="event-pricing-panel" data-epanel="partnership">
           <div class="event-pricing-subgrid">
             <div class="event-pricing-subbox">
               <div class="event-pricing-subtitle">상시 <span class="count-pill">8</span></div>
@@ -3163,13 +3509,16 @@
   // 전년대비 대당매출 감소 제휴사 알림 카드 (page3) — 기준 주는 이 카드 전용 기간설정으로 독립 선택.
 
   // 운영중 이벤트 프라이싱 박스 (page3 최상단) — 쿠폰/프라이싱/제휴 탭 전환. 수동으로 채우는 정적 정보 카드라 별도 데이터 소스 없음.
-  document.querySelectorAll('#eventPricingTabBar .tab-btn').forEach(function(btn){
-    btn.addEventListener('click', function(){
-      document.querySelectorAll('#eventPricingTabBar .tab-btn').forEach(function(b){ b.classList.remove('active'); });
-      document.querySelectorAll('.event-pricing-panel').forEach(function(p){ p.classList.remove('active'); });
-      btn.classList.add('active');
-      var panel = document.getElementById('eventPricingPanel-' + btn.dataset.etab);
-      if (panel) panel.classList.add('active');
+  // 03페이지·02페이지 상단에 동일하게 복제된 위젯이므로 위젯 인스턴스별로 탭 상태를 독립 관리한다(고정 id 대신 closest 위젯 스코프 사용).
+  document.querySelectorAll('.event-pricing-widget').forEach(function(widget){
+    widget.querySelectorAll('.tab-bar .tab-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        widget.querySelectorAll('.tab-bar .tab-btn').forEach(function(b){ b.classList.remove('active'); });
+        widget.querySelectorAll('.event-pricing-panel').forEach(function(p){ p.classList.remove('active'); });
+        btn.classList.add('active');
+        var panel = widget.querySelector('.event-pricing-panel[data-epanel="' + btn.dataset.etab + '"]');
+        if (panel) panel.classList.add('active');
+      });
     });
   });
 
@@ -3411,21 +3760,22 @@
       idleDefToggleBtnEl.textContent = 'ⓘ 기준보기';
     });
   }
-  const couponIssueDefToggleBtnEl = document.getElementById('couponIssueDefToggleBtn');
-  const couponIssueDefBoxEl = document.getElementById('couponIssueDefBox');
-  if (couponIssueDefToggleBtnEl && couponIssueDefBoxEl){
-    couponIssueDefToggleBtnEl.addEventListener('click', (ev) => {
+  // 위젯이 02/03페이지에 각각 복제되어 있으므로 버튼마다 자신이 속한 박스만 토글하도록 스코프 처리.
+  document.querySelectorAll('.coupon-issue-def-toggle').forEach(function(toggleBtn){
+    const box = toggleBtn.parentElement ? toggleBtn.parentElement.querySelector('.coupon-issue-def-box') : null;
+    if (!box) return;
+    toggleBtn.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      couponIssueDefBoxEl.classList.toggle('open');
+      box.classList.toggle('open');
     });
-  }
-  const couponIssueDefCloseBtnEl = document.getElementById('couponIssueDefCloseBtn');
-  if (couponIssueDefCloseBtnEl){
-    couponIssueDefCloseBtnEl.addEventListener('click', (ev) => {
-      ev.stopPropagation();
-      couponIssueDefBoxEl.classList.remove('open');
-    });
-  }
+    const closeBtn = box.querySelector('.coupon-issue-def-close');
+    if (closeBtn){
+      closeBtn.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        box.classList.remove('open');
+      });
+    }
+  });
 
   let durationMetric = 'count';
 
