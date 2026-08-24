@@ -2035,14 +2035,16 @@
     // (연도별로 요일 배치가 미세하게 달라 대표 연도 하나 기준으로 월 경계를 판단 — 표시용 가이드 목적)
     const monthRefYear = years[years.length-1] || AVAILABLE_YEARS[AVAILABLE_YEARS.length-1];
     const refMondays = allMondaysOfYear(monthRefYear);
-    let lastRefMonth = null;
+    // 월 라벨은 그 주의 월요일이 속한 달이 아니라, 그 주(월~일) 안에 "1일"이 포함된 달을 기준으로 붙인다.
+    // (예: 12/29(월)~1/4(일) 주는 월요일 기준이면 "12월"이 되지만, 실제로 1월 1일이 그 주에 포함되므로 "1월"로 표시)
     const displayLabels = weekLabels.map((wl, idx) => {
       const dateStr = refMondays[idx];
       if (!dateStr) return wl;
-      const mo = parseDate(dateStr).getMonth() + 1;
-      if (mo !== lastRefMonth){
-        lastRefMonth = mo;
-        return [wl, `${mo}월`];
+      const mon = parseDate(dateStr);
+      for (let i = 0; i < 7; i++){
+        const d = new Date(mon);
+        d.setDate(mon.getDate() + i);
+        if (d.getDate() === 1) return [wl, `${d.getMonth()+1}월`];
       }
       return wl;
     });
@@ -2706,7 +2708,8 @@
     let sumVeh = 0, n = 0;
     ALL_WEEKS.forEach(w => {
       const d = parseDate(w);
-      if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
+      const thu = new Date(d); thu.setDate(d.getDate() + 3); // 주 소속 월은 그 주의 목요일 기준(다수 요일이 속한 달로 귀속, 연말연초 경계주 왜곡 방지)
+      if (thu.getFullYear() !== y || (thu.getMonth()+1) !== mo) return;
       const row = DATA_MAP[w];
       if (!row || !row.제휴사별) return;
       const p = row.제휴사별[name];
@@ -2730,7 +2733,8 @@
     const set = new Set();
     ALL_WEEKS.forEach(w => {
       const d = parseDate(w);
-      set.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+      const thu = new Date(d); thu.setDate(d.getDate() + 3);
+      set.add(`${thu.getFullYear()}-${String(thu.getMonth()+1).padStart(2,'0')}`);
     });
     return [...set].sort();
   }
@@ -2740,7 +2744,8 @@
     let sumRev = 0, sumVeh = 0, n = 0;
     ALL_WEEKS.forEach(w => {
       const d = parseDate(w);
-      if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
+      const thu = new Date(d); thu.setDate(d.getDate() + 3); // 주 소속 월은 그 주의 목요일 기준
+      if (thu.getFullYear() !== y || (thu.getMonth()+1) !== mo) return;
       const row = DATA_MAP[w];
       if (!row || !row.제휴사별) return;
       const p = row.제휴사별[name];
@@ -2756,7 +2761,8 @@
     let sumRev = 0, sumVeh = 0, n = 0;
     ALL_WEEKS.forEach(w => {
       const d = parseDate(w);
-      if (d.getFullYear() !== y || (d.getMonth()+1) !== mo) return;
+      const thu = new Date(d); thu.setDate(d.getDate() + 3); // 주 소속 월은 그 주의 목요일 기준
+      if (thu.getFullYear() !== y || (thu.getMonth()+1) !== mo) return;
       const row = DATA_MAP[w];
       if (!row || !row.차량수) return;
       const rev = excludeDrive ? (row.총매출 - (row.주행매출||0)) : row.총매출;
@@ -3050,7 +3056,8 @@
         let sumRev = 0, sumVeh = 0, n = 0;
         ALL_WEEKS.forEach(w => {
           const d = parseDate(w);
-          if (d.getFullYear() !== year || (d.getMonth()+1) !== month) return;
+          const thu = new Date(d); thu.setDate(d.getDate() + 3); // 주 소속 월은 그 주의 목요일 기준
+          if (thu.getFullYear() !== year || (thu.getMonth()+1) !== month) return;
           const row = DATA_MAP[w];
           if (!row || !row.제휴사별) return;
           const p = row.제휴사별[selectedPartnerTrend];
@@ -3076,12 +3083,16 @@
       const weekLabels = Array.from({length:maxWeeks}, (_,i) => `${i+1}주`);
       const monthRefYear = years[years.length-1];
       const refMondays = allMondaysOfYear(monthRefYear);
-      let lastRefMonth = null;
+      // 월 라벨: 월요일이 아니라 그 주(월~일)에 "1일"이 포함된 달 기준.
       displayLabels = weekLabels.map((wl, idx) => {
         const dateStr = refMondays[idx];
         if (!dateStr) return wl;
-        const mo = parseDate(dateStr).getMonth() + 1;
-        if (mo !== lastRefMonth){ lastRefMonth = mo; return [wl, `${mo}월`]; }
+        const mon = parseDate(dateStr);
+        for (let i = 0; i < 7; i++){
+          const d = new Date(mon);
+          d.setDate(mon.getDate() + i);
+          if (d.getDate() === 1) return [wl, `${d.getMonth()+1}월`];
+        }
         return wl;
       });
 
