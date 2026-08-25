@@ -1521,6 +1521,40 @@
   const dailyConvEl = document.getElementById('daily-conv-data');
   const DAILY_CONV = dailyConvEl ? JSON.parse(dailyConvEl.textContent) : {};
 
+  // 주요 이벤트(정책/시스템 변경 등) 마커 — 트렌드 차트에 세로 점선 + 라벨로 표시. 새 이벤트가 생기면 이 배열에 추가하면 된다.
+  const CHART_EVENTS = [
+    { date: '2026-06-23', label: '스팟유형+쿠폰 대개편' },
+  ];
+  const EVENT_MARKER_PLUGIN = {
+    id: 'eventMarkerPlugin',
+    afterDraw(chart, args, opts){
+      const markers = (opts && opts.markers) || [];
+      if (!markers.length) return;
+      const { ctx, chartArea, scales } = chart;
+      if (!chartArea || !scales.x) return;
+      markers.forEach(m => {
+        if (m.index == null || m.index < 0) return;
+        const xPos = scales.x.getPixelForValue(m.index);
+        if (xPos == null || isNaN(xPos) || xPos < chartArea.left || xPos > chartArea.right) return;
+        ctx.save();
+        ctx.beginPath();
+        ctx.strokeStyle = '#c0392b';
+        ctx.setLineDash([5,4]);
+        ctx.lineWidth = 1.5;
+        ctx.moveTo(xPos, chartArea.top);
+        ctx.lineTo(xPos, chartArea.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#c0392b';
+        ctx.font = '10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(m.label, xPos, chartArea.top + 11);
+        ctx.restore();
+      });
+    }
+  };
+  Chart.register(EVENT_MARKER_PLUGIN);
+
   const METRICS = [
     {key:'건수', label:'건수', unit:'건', dec:0},
     {key:'총매출', label:'총매출', unit:'원', dec:0},
@@ -2736,12 +2770,20 @@
         borderDash: dashForIndex(i, years.length),
         fill:false, tension:0.15, spanGaps:true, pointRadius:2.5
       }));
+      // 월별 축은 "몇 월"인지만 나타내고 연도를 구분하지 않으므로, 이벤트가 발생한 달의 인덱스에 라벨(연도 포함)을 붙인다.
+      const eventMarkersMonth = CHART_EVENTS.map(ev => {
+        const ed = parseDate(ev.date);
+        return { index: ed.getMonth(), label: `${ed.getFullYear()} ${ev.label}` };
+      });
       charts['chartTrendConvRate'] = new Chart(elConvRate.getContext('2d'), {
         type: 'line',
         data: { labels: monthLabels, datasets },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
+          plugins: {
+            legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} },
+            eventMarkerPlugin: { markers: eventMarkersMonth }
+          },
           scales: {
             y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:10}} }
@@ -2768,6 +2810,11 @@
         const shifted = addDays(d, -364);
         return (parseDate(shifted).getFullYear() === prevYear) ? getDailyConvRate(shifted) : null;
       });
+      // 이번 해(curYear) 달력 기준 인덱스에 이벤트 마커를 표시한다(작년 라인과는 무관, 실제 발생 시점 기준).
+      const eventMarkersDay = CHART_EVENTS
+        .filter(ev => parseDate(ev.date).getFullYear() === curYear)
+        .map(ev => ({ index: fullYearDates.indexOf(ev.date), label: ev.label }))
+        .filter(m => m.index >= 0);
       charts['chartTrendConvRate'] = new Chart(elConvRate.getContext('2d'), {
         type: 'line',
         data: {
@@ -2779,7 +2826,10 @@
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} } },
+          plugins: {
+            legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} },
+            eventMarkerPlugin: { markers: eventMarkersDay }
+          },
           scales: {
             y: { beginAtZero:true, ticks:{font:{size:10}, callback: v => v + '%'} },
             x: { ticks:{font:{size:8}, maxRotation:60, minRotation:45, autoSkip:true, maxTicksLimit:24} }
