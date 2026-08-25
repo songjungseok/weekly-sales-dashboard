@@ -4906,10 +4906,18 @@
           const data = periods.map(p => {
             const mk = `${y}-${String(p).padStart(2,'0')}`;
             const list = (vehData.months[mk] || []).filter(matchesActiveFilters);
-            const vehG = byYearMonthVeh[`${y}-${p}`];
-            if (!list.length || !vehG || !vehG.n) return null;
+            if (!list.length) return null;
             const sumRev = list.reduce((s,v)=>s+v.total, 0);
-            const avgVeh = vehG.sumVeh / vehG.n;
+            let avgVeh;
+            if (extraFilterActive){
+              // 지역/차종/차량구분 필터가 걸리면 그 조건에 해당하는 차량 수로 나눈다(전국 등록 차량수로 나누면
+              // 필터링된 매출만 남아 대당매출이 실제보다 훨씬 낮게 보이는 문제가 있었음).
+              avgVeh = list.length;
+            } else {
+              const vehG = byYearMonthVeh[`${y}-${p}`];
+              if (!vehG || !vehG.n) return null;
+              avgVeh = vehG.sumVeh / vehG.n; // 필터 없음: 01 주간실적과 동일(전체 등록 차량수, 월 평균)
+            }
             const avgRev = Math.round(sumRev / avgVeh);
             return vehTrendMetric==='rev' ? avgRev : (refBep ? Math.round(avgRev/refBep*1000)/10 : null);
           });
@@ -4920,7 +4928,9 @@
       if (hintEl){
         hintEl.textContent = vehTrendGran==='week'
           ? '* 차량수는 01 주간실적과 동일 기준(전체 등록 차량수) · 매출은 왕복+편도 합산 · VAT 제외'
-          : '* 차량수는 01 주간실적과 동일 기준(전체 등록 차량수, 월 평균) · 매출은 왕복+편도 합산 · 지역/차종/차량구분 필터 반영 · VAT 제외';
+          : (extraFilterActive
+              ? '* 차량수는 선택한 지역/차종/차량구분에 해당하는 차량 수(월별) 기준 · 매출은 왕복+편도 합산 · VAT 제외'
+              : '* 차량수는 01 주간실적과 동일 기준(전체 등록 차량수, 월 평균) · 매출은 왕복+편도 합산 · VAT 제외');
       }
     } else if (vehTrendGran === 'week'){
       const bucketKey = vehTypeFilter; // 'round' | 'mix'
