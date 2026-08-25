@@ -361,7 +361,7 @@
       </div>
     </div>
   </div>
-  <div class="chart-box" id="trendTabBox-convrate" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="convRateGranularityBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="convRateUnitLabel">단위 : % (월별 · 연도 선택 따름)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-convrate" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="convRateGranularityBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="convRateUnitLabel">단위 : % (일별 · 이번 해 vs 작년, 동일 요일 기준 비교)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
@@ -2163,7 +2163,7 @@
   // 구매전환율 — 월별(기존, 연도 선택 다중 비교) / 일별(신규, 항상 "이번 해" vs "작년" 2개 계열만 비교) 필터.
   // 일별은 1월1일끼리 맞추지 않고 364일(=52주) 전 날짜와 비교해 "같은 요일"끼리 맞춘다(예: 26년1월1일(목) ↔ 25년1월2일(목)).
   const CONV_GRANULARITIES = { day: { label: '일별' }, month: { label: '월별' } };
-  let convRateGranularity = 'month';
+  let convRateGranularity = 'day';
 
   function renderConvRateGranularityBar(){
     const wrap = document.getElementById('convRateGranularityBar');
