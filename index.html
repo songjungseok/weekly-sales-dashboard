@@ -2128,7 +2128,7 @@
 
   // 구매전환율 — 월별(기존, 연도 선택 다중 비교) / 일별(신규, 항상 "이번 해" vs "작년" 2개 계열만 비교) 필터.
   // 일별은 1월1일끼리 맞추지 않고 364일(=52주) 전 날짜와 비교해 "같은 요일"끼리 맞춘다(예: 26년1월1일(목) ↔ 25년1월2일(목)).
-  const CONV_GRANULARITIES = { month: { label: '월별' }, day: { label: '일별' } };
+  const CONV_GRANULARITIES = { day: { label: '일별' }, month: { label: '월별' } };
   let convRateGranularity = 'month';
 
   function renderConvRateGranularityBar(){
@@ -2752,11 +2752,22 @@
       const dailyDates = Object.keys(DAILY_CONV).sort();
       const curYear = dailyDates.length ? parseDate(dailyDates[dailyDates.length-1]).getFullYear() : new Date().getFullYear();
       const prevYear = curYear - 1;
-      const curDates = dailyDates.filter(d => parseDate(d).getFullYear() === curYear);
-      const dayLabels = curDates.map(d => `${parseDate(d).getMonth()+1}/${parseDate(d).getDate()}`);
-      const curData = curDates.map(d => getDailyConvRate(d));
+      // "이번 해" 라인은 데이터 있는 날짜까지만(미래는 자연히 공백), "작년" 라인은 12월31일까지 꽉 채워 보여주기 위해
+      // x축을 이번 해 1/1~12/31 전체(365/366일)로 생성한다(curDates를 실제 보유 데이터로만 자르지 않음).
+      const yearStart = new Date(curYear, 0, 1);
+      const isLeap = (y) => (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+      const daysInYear = isLeap(curYear) ? 366 : 365;
+      const fullYearDates = Array.from({length: daysInYear}, (_, i) => {
+        const d = new Date(yearStart); d.setDate(d.getDate() + i); return fmtDate(d);
+      });
+      const dayLabels = fullYearDates.map(d => `${parseDate(d).getMonth()+1}/${parseDate(d).getDate()}`);
+      const curData = fullYearDates.map(d => getDailyConvRate(d));
       // 작년 값은 364일 전(=정확히 52주 전, 요일 항상 일치) 날짜에서 가져온다 — 1/1끼리 맞추지 않음.
-      const prevData = curDates.map(d => getDailyConvRate(addDays(d, -364)));
+      // 단, 12/31처럼 364일 전이 같은 해로 되돌아오는 경우(365일 - 364 = 1일 오차)는 제외한다.
+      const prevData = fullYearDates.map(d => {
+        const shifted = addDays(d, -364);
+        return (parseDate(shifted).getFullYear() === prevYear) ? getDailyConvRate(shifted) : null;
+      });
       charts['chartTrendConvRate'] = new Chart(elConvRate.getContext('2d'), {
         type: 'line',
         data: {
