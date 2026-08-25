@@ -4618,11 +4618,12 @@
       vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
     }
     const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
-    const groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count}))
-      .sort((a,b)=> vehCarTypeSortDir==='asc' ? a.avg-b.avg : b.avg-a.avg);
+    let groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count}));
+    if (threshold!=null) groups = groups.filter(g => g.low>0);
+    groups.sort((a,b)=> vehCarTypeSortDir==='asc' ? a.avg-b.avg : b.avg-a.avg);
     const sortArrowEl = document.getElementById('vehCarTypeSortArrow');
     if (sortArrowEl) sortArrowEl.textContent = vehCarTypeSortDir==='asc' ? '▲' : '▼';
-    if (countEl) countEl.textContent = `전체 ${vehicles.length}대 · ${groups.length}개 차종 기준`;
+    if (countEl) countEl.textContent = threshold!=null ? `전체 ${vehicles.length}대 · 저매출 포함 차종 ${groups.length}개 표시` : `전체 ${vehicles.length}대 · ${groups.length}개 차종 기준`;
     if (!groups.length){
       tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
       if (moreBtn) moreBtn.style.display = 'none';
