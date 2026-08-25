@@ -1376,13 +1376,13 @@
           <table id="vehCarTypeTable" class="vehcartype-table">
             <thead><tr>
               <th style="text-align:left;">차종명</th>
-              <th style="text-align:right;">차량수</th>
+              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortThCount" title="클릭해서 정렬 방향 전환">차량수 <span class="sort-arrow" id="vehCarTypeSortArrowCount"></span></th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#1B2A4A;"></span>왕복매출(대당)</th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#d0346f;"></span>편도매출(대당)</th>
               <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortTh" title="클릭해서 정렬 방향 전환">합계매출(대당) <span class="sort-arrow" id="vehCarTypeSortArrow">▲</span></th>
               <th style="text-align:right;">총매출(VAT제외)</th>
               <th style="text-align:right;">매출비중</th>
-              <th style="text-align:right;">저매출차량비중</th>
+              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortThLow" title="클릭해서 정렬 방향 전환">저매출차량비중 <span class="sort-arrow" id="vehCarTypeSortArrowLow"></span></th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -4259,7 +4259,8 @@
   let vehBepTab = 'all';
   let vehBepMinCount = 3;
   let vehCarTypeExpanded = false;
-  let vehCarTypeSortDir = 'asc'; // 차종 분포 표 '합계매출(대당)' 헤더 클릭 시 오름차순/내림차순 토글
+  let vehCarTypeSortKey = 'avg'; // 차종 분포 표 정렬 기준 컬럼: avg(합계매출/대당) | count(차량수) | low(저매출차량비중)
+  let vehCarTypeSortDir = 'asc'; // 차종 분포 표 헤더 클릭 시 오름차순/내림차순 토글
   const VEH_CARTYPE_SHOW = 10;
   const vehCharts = {};
 
@@ -4618,11 +4619,15 @@
       vehicles.forEach(v => { if (v.total<=threshold) map[v.carType].low++; });
     }
     const grandTotal = vehicles.reduce((s,v)=>s+v.total,0);
-    let groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count}));
+    let groups = Object.values(map).map(g => ({...g, avg: g.total/g.count, roundAvg: g.roundTotal/g.count, onewayAvg: g.onewayTotal/g.count, lowShare: g.count ? g.low/g.count : 0}));
     if (threshold!=null) groups = groups.filter(g => g.low>0);
-    groups.sort((a,b)=> vehCarTypeSortDir==='asc' ? a.avg-b.avg : b.avg-a.avg);
-    const sortArrowEl = document.getElementById('vehCarTypeSortArrow');
-    if (sortArrowEl) sortArrowEl.textContent = vehCarTypeSortDir==='asc' ? '▲' : '▼';
+    const vehCarTypeSortGetter = { avg: g=>g.avg, count: g=>g.count, low: g=>g.lowShare }[vehCarTypeSortKey] || (g=>g.avg);
+    groups.sort((a,b)=> vehCarTypeSortDir==='asc' ? vehCarTypeSortGetter(a)-vehCarTypeSortGetter(b) : vehCarTypeSortGetter(b)-vehCarTypeSortGetter(a));
+    const vehCarTypeSortArrowMap = { avg: 'vehCarTypeSortArrow', count: 'vehCarTypeSortArrowCount', low: 'vehCarTypeSortArrowLow' };
+    Object.entries(vehCarTypeSortArrowMap).forEach(([key, elId]) => {
+      const el = document.getElementById(elId);
+      if (el) el.textContent = key===vehCarTypeSortKey ? (vehCarTypeSortDir==='asc' ? '▲' : '▼') : '';
+    });
     if (countEl) countEl.textContent = threshold!=null ? `전체 ${vehicles.length}대 · 저매출 포함 차종 ${groups.length}개 표시` : `전체 ${vehicles.length}대 · ${groups.length}개 차종 기준`;
     if (!groups.length){
       tbody.innerHTML = '<tr><td colspan="8" style="padding:16px; text-align:center; color:#999;">데이터가 없습니다.</td></tr>';
@@ -5099,11 +5104,19 @@
       renderCarTypeTable(vehicles, computeThreshold(vehicles, vehLowPct));
     });
     document.getElementById('vehCarTypeCsvBtn').addEventListener('click', exportCarTypeCsv);
-    document.getElementById('vehCarTypeSortTh').addEventListener('click', () => {
-      vehCarTypeSortDir = vehCarTypeSortDir === 'asc' ? 'desc' : 'asc';
+    const vehCarTypeSortClick = (key) => {
+      if (vehCarTypeSortKey === key){
+        vehCarTypeSortDir = vehCarTypeSortDir === 'asc' ? 'desc' : 'asc';
+      } else {
+        vehCarTypeSortKey = key;
+        vehCarTypeSortDir = 'asc';
+      }
       const vehicles = currentVehicles();
       renderCarTypeTable(vehicles, computeThreshold(vehicles, vehLowPct));
-    });
+    };
+    document.getElementById('vehCarTypeSortTh').addEventListener('click', () => vehCarTypeSortClick('avg'));
+    document.getElementById('vehCarTypeSortThCount').addEventListener('click', () => vehCarTypeSortClick('count'));
+    document.getElementById('vehCarTypeSortThLow').addEventListener('click', () => vehCarTypeSortClick('low'));
     document.getElementById('vehLowCsvBtn').addEventListener('click', exportLowCsv);
   }
 
