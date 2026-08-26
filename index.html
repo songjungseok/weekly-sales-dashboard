@@ -238,6 +238,10 @@
   .vehcartype-table td.col-total { background: #eef2fb; font-weight: 700; color: #1B2A4A; }
   .vehcartype-table tbody tr:nth-child(even) td.col-total { background: #e7edf9; }
   .vehcartype-table tbody tr:hover td.col-total { background: #dde7f8; }
+  .vehcartype-table th.col-low { color: #A32D2D; }
+  .vehcartype-table td.col-low { background: #fdecea; font-weight: 700; color: #A32D2D; font-size: 13.5px; }
+  .vehcartype-table tbody tr:nth-child(even) td.col-low { background: #fbe1df; }
+  .vehcartype-table tbody tr:hover td.col-low { background: #f8d3d1; }
   .vehcartype-dot { display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:5px; vertical-align:middle; }
   .partner-group-badge { display:inline-block; font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:10px; margin-left:6px; vertical-align:middle; white-space:nowrap; letter-spacing:0.1px; }
   .partner-group-badge.demand { background:#fbe4e4; color:#A32D2D; border:1px solid #f3c6c6; }
@@ -1382,10 +1386,10 @@
               <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortThCount" title="클릭해서 정렬 방향 전환">차량수 <span class="sort-arrow" id="vehCarTypeSortArrowCount"></span></th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#1B2A4A;"></span>왕복매출(대당)</th>
               <th style="text-align:right;"><span class="vehcartype-dot" style="background:#d0346f;"></span>편도매출(대당)</th>
-              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortTh" title="클릭해서 정렬 방향 전환">합계매출(대당) <span class="sort-arrow" id="vehCarTypeSortArrow">▲</span></th>
+              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortTh" title="클릭해서 정렬 방향 전환">합계매출(대당) <span class="sort-arrow" id="vehCarTypeSortArrow"></span></th>
               <th style="text-align:right;">총매출(VAT제외)</th>
               <th style="text-align:right;">매출비중</th>
-              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol" id="vehCarTypeSortThLow" title="클릭해서 정렬 방향 전환">저매출차량비중 <span class="sort-arrow" id="vehCarTypeSortArrowLow"></span></th>
+              <th style="text-align:right; cursor:pointer; user-select:none;" class="sortcol col-low" id="vehCarTypeSortThLow" title="클릭해서 정렬 방향 전환">🔻 저매출차량비중 <span class="sort-arrow" id="vehCarTypeSortArrowLow">▼</span></th>
             </tr></thead>
             <tbody></tbody>
           </table>
@@ -4262,8 +4266,8 @@
   let vehBepTab = 'all';
   let vehBepMinCount = 3;
   let vehCarTypeExpanded = false;
-  let vehCarTypeSortKey = 'avg'; // 차종 분포 표 정렬 기준 컬럼: avg(합계매출/대당) | count(차량수) | low(저매출차량비중)
-  let vehCarTypeSortDir = 'asc'; // 차종 분포 표 헤더 클릭 시 오름차순/내림차순 토글
+  let vehCarTypeSortKey = 'low'; // 차종 분포 표 정렬 기준 컬럼: avg(합계매출/대당) | count(차량수) | low(저매출차량비중) — 저매출차량비중이 핵심 지표라 기본 정렬
+  let vehCarTypeSortDir = 'desc'; // 차종 분포 표 헤더 클릭 시 오름차순/내림차순 토글 — 기본은 저매출비중 높은순
   const VEH_CARTYPE_SHOW = 10;
   const vehCharts = {};
 
@@ -4304,7 +4308,7 @@
       const wb = XLSX.read(bepBuf, {type:'array'});
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
       vehBepMap = {};
-      rows.forEach(r => { vehBepMap[r['차종명']] = r['bep(부가세제외)']; });
+      rows.forEach(r => { vehBepMap[String(r['차종명']||'').replace(/^\[[^\]]*\]\s*/, '')] = r['bep(부가세제외)']; });
       vehLoaded = true;
       initVehPage();
     } catch(e){
@@ -4649,7 +4653,7 @@
         <td style="text-align:right;" class="col-total">${fmtNum(g.avg)}원</td>
         <td style="text-align:right;">${fmtNum(g.total)}원</td>
         <td style="text-align:right;">${share}%</td>
-        <td style="text-align:right; color:${g.low>0?'#A32D2D':'#999'}; font-weight:${g.low>0?'600':'400'};">${fmtNum(g.low)}대 (${lowShare}%)</td>
+        <td style="text-align:right;" class="col-low">${fmtNum(g.low)}대 (${lowShare}%)</td>
       </tr>`;
     }).join('');
     if (moreBtn){
