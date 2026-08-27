@@ -2996,13 +2996,21 @@
     if (!weekRow) return {cnt:0, amt:0};
     const allDurSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
     const noExtraFilter = allDurSelected && selectedVehicleType === 'ALL' && selectedCouponDow === 'ALL';
+    // 건수는 필터 없을 때 정확한 최상위 쿠폰별.건수를 그대로 사용(반납 전 예약 포함이라 더 정확).
+    // amt(할인분자)는 최상위 쿠폰별 객체에 애초에 저장되지 않는 필드라서(건수/할인금액만 존재),
+    // 필터 여부와 무관하게 항상 이용시간구간별 버킷 합산으로 계산한다.
+    let cnt;
     if (noExtraFilter){
       const v = (weekRow.쿠폰별||{})[name];
-      return v ? {cnt:v.건수, amt:v.할인분자} : {cnt:0, amt:0};
+      cnt = v ? v.건수 : 0;
+    } else {
+      const bmap0 = couponBucketMap(weekRow, name);
+      cnt = 0;
+      selectedCouponDurs.forEach(b => { const v = bmap0[b]; if (v) cnt += (v.건수||0); });
     }
     const bmap = couponBucketMap(weekRow, name);
-    let cnt = 0, amt = 0;
-    selectedCouponDurs.forEach(b => { const v = bmap[b]; if (v){ cnt += (v.건수||0); amt += (v.할인분자||0); } });
+    let amt = 0;
+    selectedCouponDurs.forEach(b => { const v = bmap[b]; if (v) amt += (v.할인분자||0); });
     return {cnt, amt};
   }
 
@@ -3025,17 +3033,11 @@
   // 필터가 모두 '전체'면 기존 필드(쿠폰별.할인분자/예약요금관리자)를 그대로 사용해 필터 적용 전과 동일한 값을 보장.
   function couponFilteredDiscountRate(weekRow, name){
     if (!weekRow) return null;
-    const allDurSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
-    const noExtraFilter = allDurSelected && selectedVehicleType === 'ALL' && selectedCouponDow === 'ALL';
+    // 최상위 쿠폰별 객체엔 할인분자/예약요금관리자 필드가 애초에 없으므로(건수/할인금액만 존재),
+    // 필터 여부와 무관하게 항상 이용시간구간별 버킷 합산으로 계산한다.
+    const bmap = couponBucketMap(weekRow, name);
     let num = 0, resv = 0;
-    if (noExtraFilter){
-      const v = (weekRow.쿠폰별||{})[name];
-      if (!v) return null;
-      num = v.할인분자||0; resv = v.예약요금관리자||0;
-    } else {
-      const bmap = couponBucketMap(weekRow, name);
-      selectedCouponDurs.forEach(b => { const v = bmap[b]; if (v){ num += (v.할인분자||0); resv += (v.예약요금관리자||0); } });
-    }
+    selectedCouponDurs.forEach(b => { const v = bmap[b]; if (v){ num += (v.할인분자||0); resv += (v.예약요금관리자||0); } });
     if (!resv) return null;
     return num / resv;
   }
@@ -3044,12 +3046,8 @@
   // 필터가 모두 '전체'면 기존 필드(쿠폰별.대여매출/보험매출/주행매출)를 그대로 사용해 필터 적용 전과 동일한 값을 보장.
   function couponFilteredRevTypes(weekRow, name){
     if (!weekRow) return {rent:0, ins:0, drive:0};
-    const allDurSelected = selectedCouponDurs.length === COUPON_DUR_BUCKETS.length;
-    const noExtraFilter = allDurSelected && selectedVehicleType === 'ALL' && selectedCouponDow === 'ALL';
-    if (noExtraFilter){
-      const v = (weekRow.쿠폰별||{})[name];
-      return v ? {rent:v.대여매출||0, ins:v.보험매출||0, drive:v.주행매출||0} : {rent:0, ins:0, drive:0};
-    }
+    // 최상위 쿠폰별 객체엔 대여매출/보험매출/주행매출 필드가 애초에 없으므로(건수/할인금액만 존재),
+    // 필터 여부와 무관하게 항상 이용시간구간별 버킷 합산으로 계산한다.
     const bmap = couponBucketMap(weekRow, name);
     let rent = 0, ins = 0, drive = 0;
     selectedCouponDurs.forEach(b => { const v = bmap[b]; if (v){ rent += (v.대여매출||0); ins += (v.보험매출||0); drive += (v.주행매출||0); } });
