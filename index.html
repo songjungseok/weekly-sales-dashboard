@@ -140,6 +140,8 @@
   .partner-search-input:focus { outline: none; border-color: #2dd4bf; box-shadow: 0 0 0 2px rgba(45,212,191,0.25); }
   .veh-search-input { width: 120px; padding: 5px 10px; font-size: 12.5px; font-weight: 500; }
   .veh-search-list { width: 200px; }
+  .coupon-name-search-input { width: 220px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
+  .coupon-name-search-list { width: 340px; }
   .partner-search-list {
     display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     width: 260px; max-height: 260px; overflow-y: auto; background: #fff;
@@ -2895,6 +2897,51 @@
     ALL_WEEKS.flatMap(w => Object.keys((DATA_MAP[w] && DATA_MAP[w].차량유형별) || {}))
   )).sort();
 
+  // 쿠폰명 필터(검색 가능) — 전체 86주에 걸쳐 한 번이라도 등장한 쿠폰명을 모아 검색 대상으로 사용.
+  // 값이 비어있으면(기본) 기존 Top10+신규쿠폰 표시를 그대로 유지하고, 특정 쿠폰을 선택하면 그 쿠폰 한 줄만 표시한다.
+  let selectedCouponName = '';
+  const ALL_COUPON_NAMES = Array.from(new Set(
+    ALL_WEEKS.flatMap(w => Object.keys((DATA_MAP[w] && DATA_MAP[w].쿠폰별) || {}))
+  )).sort((a,b) => a.localeCompare(b, 'ko'));
+  let couponNameFilterWired = false;
+
+  function renderCouponNameFilter(){
+    const input = document.getElementById('couponNameSearchInput');
+    const list = document.getElementById('couponNameSearchList');
+    if (!input || !list) return;
+    input.value = selectedCouponName;
+
+    function renderList(filterText){
+      const q = (filterText || '').trim().toLowerCase();
+      const matched = q ? ALL_COUPON_NAMES.filter(n => n.toLowerCase().includes(q)) : ALL_COUPON_NAMES;
+      let itemsHtml = `<div class="partner-search-item${selectedCouponName===''?' selected':''}" data-value="">전체 (Top10 표시)</div>`;
+      if (matched.length){
+        itemsHtml += matched.map(n => `<div class="partner-search-item${n===selectedCouponName?' selected':''}" data-value="${n}">${n}</div>`).join('');
+      } else if (q) {
+        itemsHtml += '<div class="partner-search-empty">일치하는 쿠폰이 없습니다</div>';
+      }
+      list.innerHTML = itemsHtml;
+      list.querySelectorAll('.partner-search-item').forEach(item => {
+        item.addEventListener('click', () => {
+          selectedCouponName = item.dataset.value;
+          input.value = selectedCouponName;
+          list.classList.remove('open');
+          renderCouponTable();
+        });
+      });
+    }
+
+    input.onfocus = () => { renderList(''); list.classList.add('open'); };
+    input.oninput = () => { renderList(input.value); list.classList.add('open'); };
+    input.onblur = () => { setTimeout(() => { list.classList.remove('open'); input.value = selectedCouponName; }, 150); };
+    if (!couponNameFilterWired){
+      couponNameFilterWired = true;
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('#couponNameSearchInput') && !e.target.closest('#couponNameSearchList')) list.classList.remove('open');
+      });
+    }
+  }
+
   function renderCouponVtypeFilter(){
     const sel = document.getElementById('couponVtypeFilter');
     if (!sel) return;
@@ -2963,6 +3010,7 @@
     renderCouponDurCheckboxes();
     renderCouponVtypeFilter();
     renderCouponDowFilter();
+    renderCouponNameFilter();
     renderCouponTable();
   }
 
@@ -3134,10 +3182,18 @@
       return {name, cnt, amt, isNew: isNewCoupon(name, row.주시작일)};
     }).filter(e => e.cnt > 0 || e.isNew);
     entries.sort((a,b) => b.cnt - a.cnt);
-    const top10 = entries.slice(0,10);
-    const top10Rank = new Map(top10.map((e,i)=>[e.name, i+1]));
-    const extraNew = entries.filter(e => e.isNew && !top10Rank.has(e.name));
-    const couponList = top10.concat(extraNew).sort((a,b) => b.cnt - a.cnt);
+    let top10Rank, couponList;
+    if (selectedCouponName){
+      // 쿠폰명 필터가 선택된 경우: Top10 여부와 무관하게 해당 쿠폰 한 줄만 표시(이번 주 사용량이 0이어도 표시).
+      const {cnt, amt} = couponFilteredCntAmt(row, selectedCouponName);
+      couponList = [{name: selectedCouponName, cnt, amt, isNew: isNewCoupon(selectedCouponName, row.주시작일)}];
+      top10Rank = new Map();
+    } else {
+      const top10 = entries.slice(0,10);
+      top10Rank = new Map(top10.map((e,i)=>[e.name, i+1]));
+      const extraNew = entries.filter(e => e.isNew && !top10Rank.has(e.name));
+      couponList = top10.concat(extraNew).sort((a,b) => b.cnt - a.cnt);
+    }
 
     const durMap = row.쿠폰이용시간별 || {};
     const unusedCnt = couponUnusedCnt(row);
@@ -3180,8 +3236,9 @@
       const prevVal = couponFilteredCntAmt(prevWeek ? prevWeek.row : null, e.name);
       const prevCnt = prevVal.cnt;
       const rowCls = e.isNew ? 'new-row' : '';
+      const extraNoteTxt = rank !== '—' ? '' : (selectedCouponName ? '쿠폰명 필터로 조회 중 (Top10 밖)' : 'Top10 밖 · 최근 3주 신규라 표시');
       const nameCell = `${e.name}${e.isNew ? ' <span class="new-badge">NEW</span>' : ''}` +
-        (rank === '—' ? '<span class="extra-note">Top10 밖 · 최근 3주 신규라 표시</span>' : '');
+        (extraNoteTxt ? `<span class="extra-note">${extraNoteTxt}</span>` : '');
       const dur = durMap[e.name];
       const avgTxt = dur ? `${dur.평균.toFixed(1)}h` : '—';
       const medTxt = dur ? `${dur.중앙값.toFixed(1)}h` : '—';
@@ -4085,9 +4142,16 @@
             <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">🚗 차량유형 필터</span>
             <select id="couponVtypeFilter" style="font-size:13px; font-weight:600; color:#1a2b3c; padding:6px 14px; border-radius: 0; border:1.5px solid #1a2b3c; background:#fff; font-family:inherit; cursor:pointer;"></select>
           </div>
-          <div>
+          <div style="margin-bottom:10px;">
             <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">📅 주중/주말 필터</span>
             <span id="couponDowFilter"></span>
+          </div>
+          <div>
+            <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">🔍 쿠폰명 필터</span>
+            <span class="partner-search-wrap">
+              <input type="text" id="couponNameSearchInput" class="partner-search-input coupon-name-search-input" placeholder="전체 (Top10 표시) · 쿠폰명 검색" autocomplete="off">
+              <div id="couponNameSearchList" class="partner-search-list coupon-name-search-list"></div>
+            </span>
           </div>
         </div>
         <div id="couponTableWrap"></div>
