@@ -2887,6 +2887,78 @@
     }
   }
   let couponTableRow = null, couponTablePrevWeek = null;
+  let couponTopGranularity = 'week'; // 쿠폰별 사용량 Top10 표의 기간 단위: 'week' | 'month'
+  let selectedCouponTopMonth = null; // null = 전역 선택 주가 속한 달과 자동 연동
+
+  // 주 소속 월은 그 주의 목요일 기준(대시보드 내 다른 월별 집계와 동일한 관례, 연말연초 경계주 왜곡 방지).
+  function couponWeekMonthKey(weekStart){
+    const d = parseDate(weekStart);
+    const thu = new Date(d); thu.setDate(d.getDate() + 3);
+    return `${thu.getFullYear()}-${String(thu.getMonth()+1).padStart(2,'0')}`;
+  }
+  function couponAvailableMonths(){
+    return [...new Set(ALL_WEEKS.map(couponWeekMonthKey))].sort();
+  }
+  function couponPrevMonthKey(monthKey){
+    const [y, mo] = monthKey.split('-').map(Number);
+    const dt = new Date(y, mo - 1, 1);
+    dt.setMonth(dt.getMonth() - 1);
+    return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+  }
+  // 숫자 리프값을 재귀적으로 합산하는 범용 병합 함수(중첩 깊이 무관하게 동작. 쿠폰이용시간구간별/쿠폰차량유형구간별/
+  // 쿠폰요일구간별처럼 구조가 서로 다른 중첩 객체를 모두 동일한 방식으로 월별 합산할 수 있다).
+  function deepSumInto(target, source){
+    if (!source) return;
+    Object.keys(source).forEach(k => {
+      const sv = source[k];
+      if (typeof sv === 'number'){
+        target[k] = (target[k]||0) + sv;
+      } else if (sv && typeof sv === 'object'){
+        if (!target[k]) target[k] = {};
+        deepSumInto(target[k], sv);
+      }
+    });
+  }
+  const COUPON_MONTH_SUM_KEYS = ['쿠폰별','쿠폰이용시간구간별','쿠폰차량유형구간별','쿠폰요일구간별','이용시간구간별','이용시간구간별요일','차량유형구간별'];
+  const couponMonthlyRowCache = {};
+  // 특정 월(YYYY-MM)에 속하는 주들의 쿠폰 관련 필드를 합산해, 기존 주간 row와 동일한 형태의 가상 row를 만든다.
+  // 이렇게 하면 renderCouponTable 등 기존 로직을 전혀 손대지 않고 월별 집계를 그대로 재사용할 수 있다.
+  // 단, 쿠폰이용시간별(평균/중앙값)은 단순 합산이 불가능해 주별 건수로 가중평균한 근사값을 사용한다.
+  function buildMonthlyCouponRow(monthKey){
+    if (couponMonthlyRowCache[monthKey]) return couponMonthlyRowCache[monthKey];
+    const weeks = ALL_WEEKS.filter(w => couponWeekMonthKey(w) === monthKey).sort();
+    if (!weeks.length) return null;
+    const lastWeek = weeks[weeks.length-1];
+    const merged = {
+      주시작일: lastWeek, 주종료일: (DATA_MAP[lastWeek]||{}).주종료일 || lastWeek, 건수: 0,
+      쿠폰별:{}, 쿠폰이용시간구간별:{}, 쿠폰차량유형구간별:{}, 쿠폰요일구간별:{}, 쿠폰이용시간별:{},
+      이용시간구간별:{}, 이용시간구간별요일:{}, 차량유형구간별:{}
+    };
+    const durAgg = {};
+    weeks.forEach(w => {
+      const row = DATA_MAP[w];
+      if (!row) return;
+      merged.건수 += (row.건수||0);
+      COUPON_MONTH_SUM_KEYS.forEach(k => deepSumInto(merged[k], row[k] || {}));
+      const cb = row.쿠폰별 || {};
+      const dur = row.쿠폰이용시간별 || {};
+      Object.keys(dur).forEach(name => {
+        const cnt = (cb[name] && cb[name].건수) || 0;
+        if (!cnt) return;
+        if (!durAgg[name]) durAgg[name] = {sumAvgW:0, sumMedW:0, sumCnt:0};
+        durAgg[name].sumAvgW += (dur[name].평균||0) * cnt;
+        durAgg[name].sumMedW += (dur[name].중앙값||0) * cnt;
+        durAgg[name].sumCnt += cnt;
+      });
+    });
+    Object.keys(durAgg).forEach(name => {
+      const a = durAgg[name];
+      if (a.sumCnt) merged.쿠폰이용시간별[name] = { 평균: a.sumAvgW / a.sumCnt, 중앙값: a.sumMedW / a.sumCnt };
+    });
+    couponMonthlyRowCache[monthKey] = merged;
+    return merged;
+  }
+
   const COUPON_DUR_BUCKETS = ['4시간 이하','4시간~24시간 이하','24시간 초과'];
   const COUPON_DUR_LABELS = {'4시간 이하':'4시간미만', '4시간~24시간 이하':'4-24시간미만', '24시간 초과':'24시간초과'};
   let selectedCouponDurs = COUPON_DUR_BUCKETS.slice();
@@ -2975,37 +3047,92 @@
   function couponTopEffectiveWeek(globalWeekStart){
     return (selectedCouponTopWeek && DATA_MAP[selectedCouponTopWeek]) ? selectedCouponTopWeek : globalWeekStart;
   }
+  function couponTopEffectiveMonth(globalWeekStart){
+    const months = couponAvailableMonths();
+    if (selectedCouponTopMonth && months.includes(selectedCouponTopMonth)) return selectedCouponTopMonth;
+    return couponWeekMonthKey(globalWeekStart);
+  }
 
   function renderCouponTopPeriodControl(globalWeekStart){
     const box = document.getElementById('couponTopPeriodControl');
     if (!box) return;
-    const eff = couponTopEffectiveWeek(globalWeekStart);
-    const row = DATA_MAP[eff];
-    const label = row ? `${row.주시작일} ~ ${row.주종료일}` : eff;
-    const linked = !selectedCouponTopWeek;
-    box.innerHTML = `
-      <button type="button" id="couponTopPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
-      <span style="font-size:12.5px; font-weight:700; color:#1a2b3c; margin:0 8px;">${label}</span>
-      <button type="button" id="couponTopNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
-      <button type="button" id="couponTopLinkBtn" class="tab-btn${linked ? ' active' : ''}" style="padding:5px 10px; font-size:12px; margin-left:10px;">🔗 주간실적 주 연동${linked ? ' 중' : ''}</button>
-    `;
-    document.getElementById('couponTopPrevBtn').addEventListener('click', () => {
-      const i = ALL_WEEKS.indexOf(couponTopEffectiveWeek(select.value));
-      if (i > 0){ selectedCouponTopWeek = ALL_WEEKS[i-1]; updateCouponTopForWeek(select.value); }
+    const granTabsHtml = `
+      <span class="tab-bar" style="margin-right:10px;">
+        <button type="button" class="tab-btn${couponTopGranularity==='week' ? ' active' : ''}" id="couponTopGranWeekBtn" style="padding:5px 12px; font-size:12px;">주별</button>
+        <button type="button" class="tab-btn${couponTopGranularity==='month' ? ' active' : ''}" id="couponTopGranMonthBtn" style="padding:5px 12px; font-size:12px;">월별</button>
+      </span>`;
+    let bodyHtml;
+    if (couponTopGranularity === 'month'){
+      const eff = couponTopEffectiveMonth(globalWeekStart);
+      const [y, mo] = eff.split('-');
+      const linked = !selectedCouponTopMonth;
+      bodyHtml = `
+        <button type="button" id="couponTopPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
+        <span style="font-size:12.5px; font-weight:700; color:#1a2b3c; margin:0 8px;">${y}년 ${mo}월</span>
+        <button type="button" id="couponTopNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
+        <button type="button" id="couponTopLinkBtn" class="tab-btn${linked ? ' active' : ''}" style="padding:5px 10px; font-size:12px; margin-left:10px;">🔗 주간실적 주 연동${linked ? ' 중' : ''}</button>
+      `;
+    } else {
+      const eff = couponTopEffectiveWeek(globalWeekStart);
+      const row = DATA_MAP[eff];
+      const label = row ? `${row.주시작일} ~ ${row.주종료일}` : eff;
+      const linked = !selectedCouponTopWeek;
+      bodyHtml = `
+        <button type="button" id="couponTopPrevBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">◀</button>
+        <span style="font-size:12.5px; font-weight:700; color:#1a2b3c; margin:0 8px;">${label}</span>
+        <button type="button" id="couponTopNextBtn" class="tab-btn" style="padding:5px 10px; font-size:12px;">▶</button>
+        <button type="button" id="couponTopLinkBtn" class="tab-btn${linked ? ' active' : ''}" style="padding:5px 10px; font-size:12px; margin-left:10px;">🔗 주간실적 주 연동${linked ? ' 중' : ''}</button>
+      `;
+    }
+    box.innerHTML = granTabsHtml + bodyHtml;
+
+    document.getElementById('couponTopGranWeekBtn').addEventListener('click', () => {
+      if (couponTopGranularity !== 'week'){ couponTopGranularity = 'week'; updateCouponTopForWeek(select.value); }
     });
-    document.getElementById('couponTopNextBtn').addEventListener('click', () => {
-      const i = ALL_WEEKS.indexOf(couponTopEffectiveWeek(select.value));
-      if (i >= 0 && i < ALL_WEEKS.length-1){ selectedCouponTopWeek = ALL_WEEKS[i+1]; updateCouponTopForWeek(select.value); }
+    document.getElementById('couponTopGranMonthBtn').addEventListener('click', () => {
+      if (couponTopGranularity !== 'month'){ couponTopGranularity = 'month'; updateCouponTopForWeek(select.value); }
     });
-    document.getElementById('couponTopLinkBtn').addEventListener('click', () => {
-      if (selectedCouponTopWeek){ selectedCouponTopWeek = null; updateCouponTopForWeek(select.value); }
-    });
+
+    if (couponTopGranularity === 'month'){
+      const months = couponAvailableMonths();
+      document.getElementById('couponTopPrevBtn').addEventListener('click', () => {
+        const i = months.indexOf(couponTopEffectiveMonth(select.value));
+        if (i > 0){ selectedCouponTopMonth = months[i-1]; updateCouponTopForWeek(select.value); }
+      });
+      document.getElementById('couponTopNextBtn').addEventListener('click', () => {
+        const i = months.indexOf(couponTopEffectiveMonth(select.value));
+        if (i >= 0 && i < months.length-1){ selectedCouponTopMonth = months[i+1]; updateCouponTopForWeek(select.value); }
+      });
+      document.getElementById('couponTopLinkBtn').addEventListener('click', () => {
+        if (selectedCouponTopMonth){ selectedCouponTopMonth = null; updateCouponTopForWeek(select.value); }
+      });
+    } else {
+      document.getElementById('couponTopPrevBtn').addEventListener('click', () => {
+        const i = ALL_WEEKS.indexOf(couponTopEffectiveWeek(select.value));
+        if (i > 0){ selectedCouponTopWeek = ALL_WEEKS[i-1]; updateCouponTopForWeek(select.value); }
+      });
+      document.getElementById('couponTopNextBtn').addEventListener('click', () => {
+        const i = ALL_WEEKS.indexOf(couponTopEffectiveWeek(select.value));
+        if (i >= 0 && i < ALL_WEEKS.length-1){ selectedCouponTopWeek = ALL_WEEKS[i+1]; updateCouponTopForWeek(select.value); }
+      });
+      document.getElementById('couponTopLinkBtn').addEventListener('click', () => {
+        if (selectedCouponTopWeek){ selectedCouponTopWeek = null; updateCouponTopForWeek(select.value); }
+      });
+    }
   }
 
   function updateCouponTopForWeek(globalWeekStart){
-    const eff = couponTopEffectiveWeek(globalWeekStart);
-    couponTableRow = DATA_MAP[eff];
-    couponTablePrevWeek = findPrevWeek(eff);
+    if (couponTopGranularity === 'month'){
+      const eff = couponTopEffectiveMonth(globalWeekStart);
+      couponTableRow = buildMonthlyCouponRow(eff);
+      const prevKey = couponPrevMonthKey(eff);
+      const prevRow = buildMonthlyCouponRow(prevKey);
+      couponTablePrevWeek = prevRow ? {row: prevRow, date: prevKey} : null;
+    } else {
+      const eff = couponTopEffectiveWeek(globalWeekStart);
+      couponTableRow = DATA_MAP[eff];
+      couponTablePrevWeek = findPrevWeek(eff);
+    }
     renderCouponTopPeriodControl(globalWeekStart);
     renderCouponDurCheckboxes();
     renderCouponVtypeFilter();
@@ -3266,12 +3393,14 @@
     }).join('') : noDataRowHtml;
     const rowsHtml = unusedRowHtml + usedRowHtml + couponRowsHtml;
 
+    const curLabel = couponTopGranularity === 'month' ? '이번 달' : '이번 주';
+    const prevLabel = couponTopGranularity === 'month' ? '전달' : '전주';
     wrap.innerHTML = `
       <div class="coupon-table-wrap">
         <table class="coupon-table">
           <thead>
             <tr>
-              <th>순위</th><th>쿠폰명</th><th>이번 주</th><th>전주</th><th>증감</th><th>건당 할인금액</th><th>평균 할인율</th><th>평균이용시간</th><th>이용시간 중앙값</th><th>건당대여매출</th><th>건당보험매출</th><th>건당주행매출</th>
+              <th>순위</th><th>쿠폰명</th><th>${curLabel}</th><th>${prevLabel}</th><th>증감</th><th>건당 할인금액</th><th>평균 할인율</th><th>평균이용시간</th><th>이용시간 중앙값</th><th>건당대여매출</th><th>건당보험매출</th><th>건당주행매출</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
