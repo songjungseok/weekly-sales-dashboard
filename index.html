@@ -335,6 +335,7 @@
 <script id="daily-conv-data" type="application/json"></script>
 <script id="coupon-monthly-data" type="application/json"></script>
 <script id="partner-oneway-data" type="application/json"></script>
+<script id="funnel-daily-data" type="application/json"></script>
 <script id="competitor-driving-fee-data" type="application/json"></script>
 <script id="competitor-rental-price-data" type="application/json"></script>
 <script>
@@ -346,6 +347,7 @@
     'daily-conv-data': 'data/daily-conv-data.json',
     'coupon-monthly-data': 'data/coupon-monthly-data.json',
     'partner-oneway-data': 'data/partner-oneway-data.json',
+    'funnel-daily-data': 'data/funnel-daily-data.json',
     'competitor-driving-fee-data': 'data/competitor-driving-fee-data.json',
     'competitor-rental-price-data': 'data/competitor-rental-price-data.json'
   };
@@ -388,8 +390,12 @@
 <div class="sub" id="funnelSubhead" style="margin-bottom:12px;">데이터 로딩 중...</div>
 
 <div class="toolbar" id="funnelToolbar" style="display:inline-flex; justify-content:flex-start; margin-bottom:18px;">
+  <span style="display:inline-flex; margin-right:6px;">
+    <button class="navbtn" id="funnelModeWeek" style="border-right:none;">주간</button>
+    <button class="navbtn" id="funnelModeMonth">월간</button>
+  </span>
   <button class="navbtn" id="funnelPrevBtn">◀ 이전 주</button>
-  <label for="funnelWeekSelect">주 선택</label>
+  <label for="funnelWeekSelect" id="funnelSelLabel">주 선택</label>
   <select id="funnelWeekSelect"></select>
   <button class="navbtn" id="funnelNextBtn">다음 주 ▶</button>
   <button class="navbtn" id="funnelLatestBtn">최신 주</button>
@@ -398,7 +404,7 @@
 <div class="kpi-grid kpi-grid-5" id="funnelKpiGrid"></div>
 
 <div class="section">
-  <h2>🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
+  <h2 id="funnelSectionTitle">🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
   <div class="funnel-3col">
     <div class="funnel-panel">
       <div class="funnel-panel-title"><b id="funnelLabelCur">이번주</b> <span id="funnelTitleCur"></span></div>
@@ -411,12 +417,12 @@
       <div class="funnel-panel-foot" id="funnelFootPrev"></div>
     </div>
     <div class="funnel-panel">
-      <div class="funnel-panel-title">전년동기 <span id="funnelTitleYoy"></span></div>
+      <div class="funnel-panel-title"><b id="funnelLabelYoy">전년동기</b> <span id="funnelTitleYoy"></span></div>
       <div class="funnel-tree" id="funnelChartYoy"></div>
       <div class="funnel-panel-foot" id="funnelFootYoy"></div>
     </div>
   </div>
-  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 막대 길이 기준(최대값)을 동일하게 맞췄습니다. 차량조회자수 이후는 예약행동자수와 이용자수 두 갈래로 나뉘며, 각각 차량조회자 대비 비율입니다. 전년동기 = 364일 전 같은 요일 구성의 주. 방문자수·스팟조회자수·차량조회자수·예약행동자수·이용자수는 모두 일별 인원의 7일 합계입니다.</div>
+  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 막대 길이 기준(최대값)을 동일하게 맞췄습니다. 차량조회자수 이후는 예약행동자수와 이용자수 두 갈래로 나뉘며, 각각 차량조회자 대비 비율입니다. 주간: 전년동기 = 364일 전 같은 요일 구성의 주 / 월간: 전월·전년동월 = 달력 기준 같은 달(진행 중인 달은 경과 일수까지만 합산). 방문자수·스팟조회자수·차량조회자수·예약행동자수·이용자수는 모두 일별 인원의 7일 합계입니다.</div>
 </div>
 
 <div class="charts-row">
@@ -501,30 +507,85 @@
     const last = rows[rows.length - 1];
     const last12 = rows.slice(-12);
 
-    // 주간 퍼널: 주차 선택 필터
+    // 주간/월간 퍼널: 기간 선택 필터
     const fSel = document.getElementById('funnelWeekSelect');
     const fWeeks = rows.filter(function(r){ return r.방문자수 != null && r.스팟조회자수 != null && r.차량조회자수 != null; });
-    function isoWeekNo(ymd){
-      const d = new Date(ymd + 'T00:00:00'); const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-      const day = t.getUTCDay() || 7; t.setUTCDate(t.getUTCDate() + 4 - day);
-      const y0 = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-      return { y: t.getUTCFullYear(), w: Math.ceil(((t - y0) / 86400000 + 1) / 7) };
+    // 월간 데이터: CMS 일별 퍼널 지표(data/funnel-daily-data.json)를 달력 월 단위로 합산
+    let fDaily = {};
+    try { const el = document.getElementById('funnel-daily-data'); if (el && el.textContent.trim()) fDaily = JSON.parse(el.textContent); } catch(e) { fDaily = {}; }
+    const MKEYS = ['방문자수','설치수','가입수','스팟조회자수','차량조회자수','예약행동자수','이용자수'];
+    const monthMap = {};
+    Object.keys(fDaily).sort().forEach(function(d){
+      const m = d.slice(0,7);
+      if (!monthMap[m]) monthMap[m] = { key: m, 주시작일: d, 주종료일: d, days: 0 };
+      const o = monthMap[m]; o.주종료일 = d; o.days++;
+      MKEYS.forEach(function(k){ o[k] = (o[k] || 0) + (fDaily[d][k] || 0); });
+    });
+    const fMonths = Object.keys(monthMap).sort().map(function(m){
+      const o = monthMap[m]; o.이용자수_일별합 = o.이용자수;
+      const y = +m.slice(0,4), mo = +m.slice(5,7);
+      o.fullDays = new Date(y, mo, 0).getDate(); o.partial = o.days < o.fullDays;
+      return o;
+    });
+    if (!window.__funnelMode) window.__funnelMode = 'week';
+    function periodList(){ return window.__funnelMode === 'month' ? fMonths : fWeeks; }
+    function pKey(r){ return window.__funnelMode === 'month' ? r.key : r.주시작일; }
+    function optLabel(r){
+      if (window.__funnelMode === 'month') return r.key + (r.partial ? ' (' + r.주시작일.slice(8) + '~' + r.주종료일.slice(8) + '일, 진행중)' : '');
+      return r.주시작일 + ' ~ ' + r.주종료일;
     }
-    const prevSel = fSel.value;
-    const fDesc = fWeeks.slice().reverse();
-    fSel.innerHTML = fDesc.map(function(r){
-      return '<option value="' + r.주시작일 + '">' + r.주시작일 + ' ~ ' + r.주종료일 + '</option>';
-    }).join('');
-    if (prevSel && fWeeks.some(function(r){ return r.주시작일 === prevSel; })) fSel.value = prevSel;
+    let fDesc = [];
+    function buildOptions(keepValue){
+      fDesc = periodList().slice().reverse();
+      fSel.innerHTML = fDesc.map(function(r){ return '<option value="' + pKey(r) + '">' + optLabel(r) + '</option>'; }).join('');
+      if (keepValue && fDesc.some(function(r){ return pKey(r) === keepValue; })) fSel.value = keepValue;
+      const isM = window.__funnelMode === 'month', u = isM ? '달' : '주';
+      document.getElementById('funnelPrevBtn').textContent = '◀ 이전 ' + u;
+      document.getElementById('funnelNextBtn').textContent = '다음 ' + u + ' ▶';
+      document.getElementById('funnelLatestBtn').textContent = '최신 ' + u;
+      document.getElementById('funnelSelLabel').textContent = isM ? '월 선택' : '주 선택';
+      document.getElementById('funnelSectionTitle').textContent = (isM ? '🔻 월간 퍼널' : '🔻 주간 퍼널') + ' (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)';
+      const bw = document.getElementById('funnelModeWeek'), bm = document.getElementById('funnelModeMonth');
+      [[bw, !isM], [bm, isM]].forEach(function(p){ p[0].style.background = p[1] ? '#1B2A4A' : '#fff'; p[0].style.color = p[1] ? '#fff' : '#333'; });
+    }
+    buildOptions(fSel.value);
+    function findPrev(baseRow){
+      if (window.__funnelMode === 'month') {
+        let y = +baseRow.key.slice(0,4), m = +baseRow.key.slice(5,7) - 1; if (m === 0) { m = 12; y--; }
+        return monthMap[y + '-' + String(m).padStart(2,'0')] || null;
+      }
+      return findWeek(baseRow, 7);
+    }
+    function findYoy(baseRow){
+      if (window.__funnelMode === 'month') return monthMap[(+baseRow.key.slice(0,4) - 1) + baseRow.key.slice(4)] || null;
+      return findWeek(baseRow, 364);
+    }
+    function findWeek(baseRow, offsetDays){
+      const d = new Date(baseRow.주시작일 + 'T00:00:00');
+      d.setDate(d.getDate() - offsetDays);
+      const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+      return rows.find(function(r){ return r.주시작일 === key; }) || null;
+    }
+    function periodTitle(r){
+      if (!r) return '(데이터 없음)';
+      let t = '(' + r.주시작일.replace(/-/g,'.').slice(2) + ' ~ ' + r.주종료일.slice(5).replace('-','.');
+      if (window.__funnelMode === 'month' && r.partial) t += ', ' + r.days + '일';
+      return t + ')';
+    }
     function renderFunnel(){
-      const base = fWeeks.find(function(r){ return r.주시작일 === fSel.value; }) || last;
-      const isLatest = base.주시작일 === last.주시작일;
-      const idx = fDesc.findIndex(function(r){ return r.주시작일 === base.주시작일; });
+      const list = periodList();
+      if (!list.length) return;
+      const latest = list[list.length - 1];
+      const base = list.find(function(r){ return pKey(r) === fSel.value; }) || latest;
+      const isLatest = pKey(base) === pKey(latest);
+      const isM = window.__funnelMode === 'month';
+      const idx = fDesc.findIndex(function(r){ return pKey(r) === pKey(base); });
       document.getElementById('funnelPrevBtn').disabled = idx >= fDesc.length - 1;
       document.getElementById('funnelNextBtn').disabled = idx <= 0;
       document.getElementById('funnelLatestBtn').disabled = idx <= 0;
+      const baseLabel = isM ? (base.key + (base.partial ? ', ' + base.days + '일 경과' : '')) : weekLabel(base);
       document.getElementById('funnelSubhead').textContent =
-        (isLatest ? '최신 주차' : '선택 주차') + '(' + weekLabel(base) + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
+        (isLatest ? (isM ? '최신 월' : '최신 주차') : (isM ? '선택 월' : '선택 주차')) + '(' + baseLabel + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
 
       // KPI 카드
       const convRate = pct(base.이용자수_일별합, base.방문자수);
@@ -539,19 +600,13 @@
         return '<div class="kpi-card"><div class="kpi-label">' + d[0] + '</div><div class="kpi-value">' + d[1] + '</div></div>';
       }).join('');
 
-      document.getElementById('funnelLabelCur').textContent = isLatest ? '이번주' : '선택 주차';
-      document.getElementById('funnelLabelPrev').textContent = isLatest ? '전주' : '직전 주';
-      // 주간 퍼널 차트 3종 (이번주 / 전주 / 전년동기)
-      function findWeek(baseRow, offsetDays){
-        const d = new Date(baseRow.주시작일 + 'T00:00:00');
-        d.setDate(d.getDate() - offsetDays);
-        const key = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-        return rows.find(function(r){ return r.주시작일 === key; }) || null;
-      }
+      document.getElementById('funnelLabelCur').textContent = isM ? (isLatest ? '이번달' : '선택 월') : (isLatest ? '이번주' : '선택 주차');
+      document.getElementById('funnelLabelPrev').textContent = isM ? '전월' : (isLatest ? '전주' : '직전 주');
+      document.getElementById('funnelLabelYoy').textContent = isM ? '전년동월' : '전년동기';
       const funnelSets = [
         { key: 'Cur',  row: base },
-        { key: 'Prev', row: findWeek(base, 7) },
-        { key: 'Yoy',  row: findWeek(base, 364) },
+        { key: 'Prev', row: findPrev(base) },
+        { key: 'Yoy',  row: findYoy(base) },
       ];
       let funnelMax = 0;
       funnelSets.forEach(function(fs){ const r = fs.row; if (r && r.방문자수 > funnelMax) funnelMax = r.방문자수; });
@@ -566,7 +621,7 @@
       }
       funnelSets.forEach(function(fs){
         const r = fs.row;
-        document.getElementById('funnelTitle' + fs.key).textContent = r ? '(' + r.주시작일.replace(/-/g,'.').slice(2) + ' ~ ' + r.주종료일.slice(5).replace('-','.') + ')' : '(데이터 없음)';
+        document.getElementById('funnelTitle' + fs.key).textContent = periodTitle(r);
         const foot = document.getElementById('funnelFoot' + fs.key);
         const box = document.getElementById('funnelChart' + fs.key);
         if (!r || r.방문자수 == null || r.스팟조회자수 == null || r.차량조회자수 == null) {
@@ -589,14 +644,22 @@
       });
     }
     fSel.onchange = renderFunnel;
-    function stepWeek(delta){
-      const i = fDesc.findIndex(function(r){ return r.주시작일 === fSel.value; });
+    function stepPeriod(delta){
+      const i = fDesc.findIndex(function(r){ return pKey(r) === fSel.value; });
       const j = Math.min(Math.max(i + delta, 0), fDesc.length - 1);
-      if (fDesc[j]) { fSel.value = fDesc[j].주시작일; renderFunnel(); }
+      if (fDesc[j]) { fSel.value = pKey(fDesc[j]); renderFunnel(); }
     }
-    document.getElementById('funnelPrevBtn').onclick = function(){ stepWeek(1); };
-    document.getElementById('funnelNextBtn').onclick = function(){ stepWeek(-1); };
-    document.getElementById('funnelLatestBtn').onclick = function(){ if (fDesc[0]) { fSel.value = fDesc[0].주시작일; renderFunnel(); } };
+    document.getElementById('funnelPrevBtn').onclick = function(){ stepPeriod(1); };
+    document.getElementById('funnelNextBtn').onclick = function(){ stepPeriod(-1); };
+    document.getElementById('funnelLatestBtn').onclick = function(){ if (fDesc[0]) { fSel.value = pKey(fDesc[0]); renderFunnel(); } };
+    function setMode(m){
+      if (window.__funnelMode === m) return;
+      window.__funnelMode = m;
+      buildOptions(null);
+      renderFunnel();
+    }
+    document.getElementById('funnelModeWeek').onclick = function(){ setMode('week'); };
+    document.getElementById('funnelModeMonth').onclick = function(){ setMode('month'); };
     renderFunnel();
 
     // 트렌드 차트 공통 라벨
