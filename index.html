@@ -416,7 +416,7 @@
       <div class="funnel-panel-foot" id="funnelFootYoy"></div>
     </div>
   </div>
-  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 막대 길이 기준(최대값)을 동일하게 맞췄습니다. 차량조회자수 이후는 예약행동자수와 이용자수 두 갈래로 나뉘며, 각각 차량조회자 대비 비율입니다. 전년동기 = 364일 전 같은 요일 구성의 주. 방문자수·스팟조회자수·차량조회자수·예약행동자수는 일별 인원의 7일 합계, 이용자수는 주간 중복제거 인원입니다.</div>
+  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 막대 길이 기준(최대값)을 동일하게 맞췄습니다. 차량조회자수 이후는 예약행동자수와 이용자수 두 갈래로 나뉘며, 각각 차량조회자 대비 비율입니다. 전년동기 = 364일 전 같은 요일 구성의 주. 방문자수·스팟조회자수·차량조회자수·예약행동자수·이용자수는 모두 일별 인원의 7일 합계입니다.</div>
 </div>
 
 <div class="charts-row">
@@ -527,12 +527,12 @@
         (isLatest ? '최신 주차' : '선택 주차') + '(' + weekLabel(base) + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
 
       // KPI 카드
-      const convRate = pct(base.이용자수, base.방문자수);
+      const convRate = pct(base.이용자수_일별합, base.방문자수);
       const kpiDefs = [
         ['방문자수', fmtNum(base.방문자수)],
         ['설치수', fmtNum(base.설치수)],
         ['가입수', fmtNum(base.가입수)],
-        ['이용자수', fmtNum(base.이용자수)],
+        ['이용자수', fmtNum(base.이용자수_일별합)],
         ['구매전환율(이용자수/방문자수)', fmtPct(convRate)],
       ];
       document.getElementById('funnelKpiGrid').innerHTML = kpiDefs.map(function(d){
@@ -580,12 +580,12 @@
           fRow('차량조회자수', r.차량조회자수, '스팟조회자 대비 ' + fmtPct(pct(r.차량조회자수, r.스팟조회자수)), '차량조회자수') +
           '<div class="ft-branch-group">' +
             fRow('예약행동자수', r.예약행동자수, '차량조회자 대비 ' + fmtPct(pct(r.예약행동자수, r.차량조회자수)), '예약행동자수', 'mid') +
-            fRow('이용자수', r.이용자수, '차량조회자 대비 ' + fmtPct(pct(r.이용자수, r.차량조회자수)), '이용자수', 'end') +
+            fRow('이용자수', r.이용자수_일별합, '차량조회자 대비 ' + fmtPct(pct(r.이용자수_일별합, r.차량조회자수)), '이용자수', 'end') +
           '</div>';
         foot.innerHTML =
           '예약행동률(예약행동자/차량조회자) <b>' + fmtPct(pct(r.예약행동자수, r.차량조회자수)) + '</b>' +
-          ' · 이용률(이용자/차량조회자) <b>' + fmtPct(pct(r.이용자수, r.차량조회자수)) + '</b><br>' +
-          '구매전환율(이용자/방문자) <b>' + fmtPct(pct(r.이용자수, r.방문자수)) + '</b>';
+          ' · 이용률(이용자/차량조회자) <b>' + fmtPct(pct(r.이용자수_일별합, r.차량조회자수)) + '</b><br>' +
+          '구매전환율(이용자/방문자) <b>' + fmtPct(pct(r.이용자수_일별합, r.방문자수)) + '</b>';
       });
     }
     fSel.onchange = renderFunnel;
@@ -640,7 +640,7 @@
     trendConvChart = new Chart(document.getElementById('funnelTrendConv').getContext('2d'), {
       type: 'line',
       data: { labels: labels, datasets: [{
-        label: '구매전환율(%)', data: last12.map(function(r){ return pct(r.이용자수, r.방문자수); }),
+        label: '구매전환율(%)', data: last12.map(function(r){ return pct(r.이용자수_일별합, r.방문자수); }),
         borderColor: '#c0392b', backgroundColor: 'rgba(192,57,43,0.08)', fill: true, tension: 0.25,
       }] },
       options: { responsive: true, maintainAspectRatio: false,
@@ -654,7 +654,7 @@
     document.getElementById('funnelTableBody').innerHTML = last12.slice().reverse().map(function(r){
       const ir = pct(r.설치수, r.방문자수);
       const sr = pct(r.가입수, r.설치수);
-      const cr = pct(r.이용자수, r.방문자수);
+      const cr = pct(r.이용자수_일별합, r.방문자수);
       return '<tr>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee;">' + weekLabel(r) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.방문자수) + '</td>' +
@@ -662,7 +662,7 @@
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.가입수) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.스팟조회수) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.차량조회수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.이용자수) + '</td>' +
+        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.이용자수_일별합) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(ir) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(sr) + '</td>' +
         '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(cr) + '</td>' +
