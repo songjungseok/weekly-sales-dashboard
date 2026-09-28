@@ -587,14 +587,35 @@
       document.getElementById('funnelSubhead').textContent =
         (isLatest ? (isM ? '최신 월' : '최신 주차') : (isM ? '선택 월' : '선택 주차')) + '(' + baseLabel + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
 
-      // KPI 카드
+      // KPI 카드 (+ 주간: 전주 대비 / 월간: 전월 대비 증감)
       const convRate = pct(base.이용자수_일별합, base.방문자수);
+      let cmp = findPrev(base), cmpLabel = isM ? '전월' : '전주';
+      if (isM && cmp && base.partial) {
+        // 진행 중인 달은 전월의 같은 일수(1일~N일)와 비교
+        const o = { 방문자수:0, 설치수:0, 가입수:0, 이용자수_일별합:0 }; let n = 0;
+        Object.keys(fDaily).sort().forEach(function(d){
+          if (d.slice(0,7) === cmp.key && +d.slice(8) <= base.days) { n++; o.방문자수 += fDaily[d].방문자수||0; o.설치수 += fDaily[d].설치수||0; o.가입수 += fDaily[d].가입수||0; o.이용자수_일별합 += fDaily[d].이용자수||0; }
+        });
+        cmp = n ? o : null; cmpLabel = '전월 동기간';
+      }
+      function dRate(cur, prev){
+        if (cur == null || prev == null || !prev) return '';
+        const v = (cur / prev - 1) * 100;
+        const cls = v > 0.05 ? '#d0342c' : (v < -0.05 ? '#2266cc' : '#888');
+        return ' <span style="font-size:12.5px;font-weight:600;color:' + cls + ';">(' + cmpLabel + ' 대비 ' + (v > 0 ? '+' : '') + v.toFixed(1) + '%)</span>';
+      }
+      function dPt(cur, prev){
+        if (cur == null || prev == null) return '';
+        const v = cur - prev;
+        const cls = v > 0.05 ? '#d0342c' : (v < -0.05 ? '#2266cc' : '#888');
+        return ' <span style="font-size:12.5px;font-weight:600;color:' + cls + ';">(' + cmpLabel + ' 대비 ' + (v > 0 ? '+' : '') + v.toFixed(1) + '%p)</span>';
+      }
       const kpiDefs = [
-        ['방문자수', fmtNum(base.방문자수)],
-        ['설치수', fmtNum(base.설치수)],
-        ['가입수', fmtNum(base.가입수)],
-        ['이용자수', fmtNum(base.이용자수_일별합)],
-        ['구매전환율(이용자수/방문자수)', fmtPct(convRate)],
+        ['방문자수', fmtNum(base.방문자수) + dRate(base.방문자수, cmp && cmp.방문자수)],
+        ['설치수', fmtNum(base.설치수) + dRate(base.설치수, cmp && cmp.설치수)],
+        ['가입수', fmtNum(base.가입수) + dRate(base.가입수, cmp && cmp.가입수)],
+        ['이용자수', fmtNum(base.이용자수_일별합) + dRate(base.이용자수_일별합, cmp && cmp.이용자수_일별합)],
+        ['구매전환율(이용자수/방문자수)', fmtPct(convRate) + dPt(convRate, cmp ? pct(cmp.이용자수_일별합, cmp.방문자수) : null)],
       ];
       document.getElementById('funnelKpiGrid').innerHTML = kpiDefs.map(function(d){
         return '<div class="kpi-card"><div class="kpi-label">' + d[0] + '</div><div class="kpi-value">' + d[1] + '</div></div>';
