@@ -683,8 +683,18 @@
     document.getElementById('funnelModeMonth').onclick = function(){ setMode('month'); };
     renderFunnel();
 
-    // 트렌드 차트 공통 라벨
-    const labels = last12.map(weekLabel);
+    // 트렌드 차트 공통 라벨 — 02 주간 실적과 동일하게 "N주" + (그 주에 1일이 포함되면) "M월"
+    const labels = last12.map(function(r){
+      const t = new Date(r.주시작일 + 'T00:00:00'); const u = new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()));
+      const dn = u.getUTCDay() || 7; u.setUTCDate(u.getUTCDate() + 4 - dn);
+      const wl = Math.ceil(((u - new Date(Date.UTC(u.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7) + '주';
+      const mon = new Date(r.주시작일 + 'T00:00:00');
+      for (let i = 0; i < 7; i++){
+        const d = new Date(mon); d.setDate(mon.getDate() + i);
+        if (d.getDate() === 1) return [wl, (d.getMonth()+1) + '월'];
+      }
+      return wl;
+    });
 
     if (trendVisitorChart) trendVisitorChart.destroy();
     trendVisitorChart = new Chart(document.getElementById('funnelTrendVisitor').getContext('2d'), {
