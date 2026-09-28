@@ -519,7 +519,23 @@
       const r = fs.row;
       document.getElementById('funnelTitle' + fs.key).textContent = r ? '(' + r.주시작일.replace(/-/g,'.').slice(2) + ' ~ ' + r.주종료일.slice(5).replace('-','.') + ')' : '(데이터 없음)';
       const foot = document.getElementById('funnelFoot' + fs.key);
-      if (!r || r.방문자수 == null) { foot.innerHTML = '해당 주차의 퍼널 데이터가 없습니다.'; return; }
+      const canvas = document.getElementById('funnelChart' + fs.key);
+      const box = canvas.parentNode;
+      let empty = box.querySelector('.funnel-empty');
+      if (!r || r.방문자수 == null) {
+        canvas.style.display = 'none';
+        if (!empty) {
+          empty = document.createElement('div');
+          empty.className = 'funnel-empty';
+          empty.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;font-weight:600;background:#fafafa;border-radius:6px;';
+          empty.textContent = '데이터 없음';
+          box.appendChild(empty);
+        }
+        foot.innerHTML = '데이터 없음';
+        return;
+      }
+      canvas.style.display = '';
+      if (empty) empty.remove();
       funnelCharts[fs.key] = new Chart(document.getElementById('funnelChart' + fs.key).getContext('2d'), {
         type: 'bar',
         data: { labels: stageLabels, datasets: [{ data: stageVals(r), backgroundColor: ['#1B2A4A', '#2d4a7a', '#3f7cac', '#2dd4bf'], borderRadius: 4 }] },
