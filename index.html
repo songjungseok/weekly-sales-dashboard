@@ -115,6 +115,19 @@
   .funnel-panel { border: 1px solid #eee; border-radius: 8px; padding: 12px 14px; background: #fff; min-width: 0; }
   .funnel-panel-title { font-size: 13px; font-weight: 700; color: #1B2A4A; margin-bottom: 8px; }
   .funnel-panel-title span { font-weight: 400; color: #888; font-size: 12px; margin-left: 4px; }
+  .funnel-tree { min-height: 250px; padding: 6px 0 2px; }
+  .ft-row { display: flex; align-items: center; height: 40px; }
+  .ft-label { flex: 0 0 104px; font-size: 12px; color: #444; font-weight: 600; position: relative; white-space: nowrap; }
+  .ft-track { flex: 1; position: relative; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .ft-bar { height: 24px; border-radius: 4px; flex: 0 0 auto; }
+  .ft-val { font-size: 12px; font-weight: 700; color: #1B2A4A; white-space: nowrap; }
+  .ft-rate { font-size: 11px; color: #888; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ft-branch-group { position: relative; margin-left: 10px; border-left: 2px solid #c9d6e3; margin-top: -6px; padding-top: 6px; }
+  .ft-branch .ft-label { flex-basis: 94px; padding-left: 14px; }
+  .ft-conn { position: absolute; left: 0; top: 50%; width: 10px; border-top: 2px solid #c9d6e3; }
+  .ft-branch-group .ft-end { position: relative; }
+  .ft-branch-group .ft-end::before { content: ''; position: absolute; left: -2px; top: 50%; bottom: 0; border-left: 2px solid #fff; }
+  .ft-empty { height: 250px; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 14px; font-weight: 600; background: #fafafa; border-radius: 6px; }
   .funnel-panel-foot { font-size: 11.5px; color: #666; margin-top: 8px; line-height: 1.6; }
   @media (max-width: 900px) { .charts-row { grid-template-columns: 1fr; } }
   .vtype-compare-table { width: 100%; border-collapse: collapse; font-size: 12px; white-space: nowrap; }
@@ -377,25 +390,25 @@
 <div class="kpi-grid kpi-grid-5" id="funnelKpiGrid"></div>
 
 <div class="section">
-  <h2>🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 → 이용)</h2>
+  <h2>🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
   <div class="funnel-3col">
     <div class="funnel-panel">
       <div class="funnel-panel-title">이번주 <span id="funnelTitleCur"></span></div>
-      <div class="chart-box" style="height:290px;"><canvas id="funnelChartCur"></canvas></div>
+      <div class="funnel-tree" id="funnelChartCur"></div>
       <div class="funnel-panel-foot" id="funnelFootCur"></div>
     </div>
     <div class="funnel-panel">
       <div class="funnel-panel-title">전주 <span id="funnelTitlePrev"></span></div>
-      <div class="chart-box" style="height:290px;"><canvas id="funnelChartPrev"></canvas></div>
+      <div class="funnel-tree" id="funnelChartPrev"></div>
       <div class="funnel-panel-foot" id="funnelFootPrev"></div>
     </div>
     <div class="funnel-panel">
       <div class="funnel-panel-title">전년동기 <span id="funnelTitleYoy"></span></div>
-      <div class="chart-box" style="height:290px;"><canvas id="funnelChartYoy"></canvas></div>
+      <div class="funnel-tree" id="funnelChartYoy"></div>
       <div class="funnel-panel-foot" id="funnelFootYoy"></div>
     </div>
   </div>
-  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 가로축 최대값을 동일하게 맞췄습니다. 전년동기 = 364일 전 같은 요일 구성의 주. 방문자수·스팟조회자수·차량조회자수·예약행동자수는 일별 인원의 7일 합계, 이용자수는 주간 중복제거 인원입니다.</div>
+  <div id="funnelLatestFoot" style="font-size:11.5px;color:#bbb;margin-top:10px;">※ 세 그래프는 비교가 쉽도록 막대 길이 기준(최대값)을 동일하게 맞췄습니다. 차량조회자수 이후는 예약행동자수와 이용자수 두 갈래로 나뉘며, 각각 차량조회자 대비 비율입니다. 전년동기 = 364일 전 같은 요일 구성의 주. 방문자수·스팟조회자수·차량조회자수·예약행동자수는 일별 인원의 7일 합계, 이용자수는 주간 중복제거 인원입니다.</div>
 </div>
 
 <div class="charts-row">
@@ -471,7 +484,6 @@
     return r.주시작일.slice(5) + '~' + r.주종료일.slice(5);
   }
 
-  const funnelCharts = { Cur: null, Prev: null, Yoy: null };
   let trendVisitorChart = null, trendAcqChart = null, trendViewChart = null, trendConvChart = null;
   let wired = false;
 
@@ -509,49 +521,39 @@
       { key: 'Prev', row: findWeek(last, 7) },
       { key: 'Yoy',  row: findWeek(last, 364) },
     ];
-    const stageLabels = ['방문자수', '스팟조회자수', '차량조회자수', '예약행동자수', '이용자수'];
-    const stageVals = function(r){ return r ? [r.방문자수, r.스팟조회자수, r.차량조회자수, r.예약행동자수, r.이용자수] : [null,null,null,null,null]; };
     let funnelMax = 0;
-    funnelSets.forEach(function(fs){ stageVals(fs.row).forEach(function(v){ if (v && v > funnelMax) funnelMax = v; }); });
-    funnelMax = funnelMax ? Math.ceil(funnelMax * 1.08 / 10000) * 10000 : undefined;
+    funnelSets.forEach(function(fs){ const r = fs.row; if (r && r.방문자수 > funnelMax) funnelMax = r.방문자수; });
+    const FCOL = { 방문자수:'#1B2A4A', 스팟조회자수:'#2d4a7a', 차량조회자수:'#3f7cac', 예약행동자수:'#5fa8c9', 이용자수:'#2dd4bf' };
+    function fRow(label, v, rateText, key, branch){
+      const w = funnelMax ? Math.max(v / funnelMax * 62, 0.5) : 0;
+      return '<div class="ft-row' + (branch ? ' ft-branch ft-' + branch : '') + '">' +
+        '<div class="ft-label">' + (branch ? '<span class="ft-conn"></span>' : '') + label + '</div>' +
+        '<div class="ft-track"><div class="ft-bar" style="width:' + w.toFixed(2) + '%;background:' + FCOL[key] + ';"></div>' +
+        '<span class="ft-val">' + fmtNum(v) + '</span>' +
+        (rateText ? '<span class="ft-rate">' + rateText + '</span>' : '') + '</div></div>';
+    }
     funnelSets.forEach(function(fs){
-      if (funnelCharts[fs.key]) { funnelCharts[fs.key].destroy(); funnelCharts[fs.key] = null; }
       const r = fs.row;
       document.getElementById('funnelTitle' + fs.key).textContent = r ? '(' + r.주시작일.replace(/-/g,'.').slice(2) + ' ~ ' + r.주종료일.slice(5).replace('-','.') + ')' : '(데이터 없음)';
       const foot = document.getElementById('funnelFoot' + fs.key);
-      const canvas = document.getElementById('funnelChart' + fs.key);
-      const box = canvas.parentNode;
-      let empty = box.querySelector('.funnel-empty');
-      if (!r || r.방문자수 == null || r.스팟조회자수 == null) {
-        canvas.style.display = 'none';
-        if (!empty) {
-          empty = document.createElement('div');
-          empty.className = 'funnel-empty';
-          empty.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;font-size:14px;font-weight:600;background:#fafafa;border-radius:6px;';
-          empty.textContent = '데이터 없음';
-          box.appendChild(empty);
-        }
+      const box = document.getElementById('funnelChart' + fs.key);
+      if (!r || r.방문자수 == null || r.스팟조회자수 == null || r.차량조회자수 == null) {
+        box.innerHTML = '<div class="ft-empty">데이터 없음</div>';
         foot.innerHTML = '데이터 없음';
         return;
       }
-      canvas.style.display = '';
-      if (empty) empty.remove();
-      funnelCharts[fs.key] = new Chart(document.getElementById('funnelChart' + fs.key).getContext('2d'), {
-        type: 'bar',
-        data: { labels: stageLabels, datasets: [{ data: stageVals(r), backgroundColor: ['#1B2A4A', '#2d4a7a', '#3f7cac', '#5fa8c9', '#2dd4bf'], borderRadius: 4 }] },
-        options: {
-          indexAxis: 'y', responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false },
-            tooltip: { callbacks: { label: function(ctx){ return fmtNum(ctx.parsed.x) + '명'; } } } },
-          scales: { x: { max: funnelMax, ticks: { callback: function(v){ return fmtNum(v); }, font: { size: 10 } } } }
-        }
-      });
+      box.innerHTML =
+        fRow('방문자수', r.방문자수, '', '방문자수') +
+        fRow('스팟조회자수', r.스팟조회자수, '방문자 대비 ' + fmtPct(pct(r.스팟조회자수, r.방문자수)), '스팟조회자수') +
+        fRow('차량조회자수', r.차량조회자수, '스팟조회자 대비 ' + fmtPct(pct(r.차량조회자수, r.스팟조회자수)), '차량조회자수') +
+        '<div class="ft-branch-group">' +
+          fRow('예약행동자수', r.예약행동자수, '차량조회자 대비 ' + fmtPct(pct(r.예약행동자수, r.차량조회자수)), '예약행동자수', 'mid') +
+          fRow('이용자수', r.이용자수, '차량조회자 대비 ' + fmtPct(pct(r.이용자수, r.차량조회자수)), '이용자수', 'end') +
+        '</div>';
       foot.innerHTML =
-        '스팟조회율(스팟조회자/방문자) <b>' + fmtPct(pct(r.스팟조회자수, r.방문자수)) + '</b>' +
-        ' · 차량조회율(차량조회자/스팟조회자) <b>' + fmtPct(pct(r.차량조회자수, r.스팟조회자수)) + '</b><br>' +
         '예약행동률(예약행동자/차량조회자) <b>' + fmtPct(pct(r.예약행동자수, r.차량조회자수)) + '</b>' +
-        ' · 이용전환율(이용자/예약행동자) <b>' + fmtPct(pct(r.이용자수, r.예약행동자수)) + '</b>' +
-        ' · 구매전환율(이용자/방문자) <b>' + fmtPct(pct(r.이용자수, r.방문자수)) + '</b>';
+        ' · 이용률(이용자/차량조회자) <b>' + fmtPct(pct(r.이용자수, r.차량조회자수)) + '</b><br>' +
+        '구매전환율(이용자/방문자) <b>' + fmtPct(pct(r.이용자수, r.방문자수)) + '</b>';
     });
 
     // 트렌드 차트 공통 라벨
