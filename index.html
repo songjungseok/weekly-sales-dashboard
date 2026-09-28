@@ -383,6 +383,14 @@
 
 <div style="position:absolute; top:0; right:0; color:#e02424; font-weight:700; font-size:13px;">해당페이지는 예시입니다. 기획 예정</div>
 
+<div class="toolbar" id="funnelToolbar" style="justify-content:flex-start; margin-bottom:18px;">
+  <button class="navbtn" id="funnelPrevBtn">◀ 이전 주</button>
+  <label for="funnelWeekSelect">주 선택</label>
+  <select id="funnelWeekSelect"></select>
+  <button class="navbtn" id="funnelNextBtn">다음 주 ▶</button>
+  <button class="navbtn" id="funnelLatestBtn">최신 주</button>
+</div>
+
 <div class="page-eyebrow">FUNNEL OVERVIEW</div>
 <h1>🔻 퍼널별 현황</h1>
 <div class="sub" id="funnelSubhead">데이터 로딩 중...</div>
@@ -390,12 +398,7 @@
 <div class="kpi-grid kpi-grid-5" id="funnelKpiGrid"></div>
 
 <div class="section">
-  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:4px;">
-    <h2 style="margin-bottom:0;">🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
-    <label style="font-size:12.5px; color:#555; display:flex; align-items:center; gap:8px;">주차 선택
-      <select id="funnelWeekSelect" style="padding:6px 10px; border:1px solid #d6dbe1; border-radius:6px; font-size:12.5px; background:#fff; min-width:210px;"></select>
-    </label>
-  </div>
+  <h2>🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
   <div class="funnel-3col">
     <div class="funnel-panel">
       <div class="funnel-panel-title"><b id="funnelLabelCur">이번주</b> <span id="funnelTitleCur"></span></div>
@@ -498,22 +501,6 @@
     const last = rows[rows.length - 1];
     const last12 = rows.slice(-12);
 
-    document.getElementById('funnelSubhead').textContent =
-      '최신 주차(' + weekLabel(last) + ') 기준 방문 → 설치 → 가입 → 이용 퍼널 현황입니다.';
-
-    // KPI 카드
-    const convRate = pct(last.이용자수, last.방문자수);
-    const kpiDefs = [
-      ['방문자수', fmtNum(last.방문자수)],
-      ['설치수', fmtNum(last.설치수)],
-      ['가입수', fmtNum(last.가입수)],
-      ['이용자수', fmtNum(last.이용자수)],
-      ['구매전환율(이용자수/방문자수)', fmtPct(convRate)],
-    ];
-    document.getElementById('funnelKpiGrid').innerHTML = kpiDefs.map(function(d){
-      return '<div class="kpi-card"><div class="kpi-label">' + d[0] + '</div><div class="kpi-value">' + d[1] + '</div></div>';
-    }).join('');
-
     // 주간 퍼널: 주차 선택 필터
     const fSel = document.getElementById('funnelWeekSelect');
     const fWeeks = rows.filter(function(r){ return r.방문자수 != null && r.스팟조회자수 != null && r.차량조회자수 != null; });
@@ -524,14 +511,34 @@
       return { y: t.getUTCFullYear(), w: Math.ceil(((t - y0) / 86400000 + 1) / 7) };
     }
     const prevSel = fSel.value;
-    fSel.innerHTML = fWeeks.slice().reverse().map(function(r, i){
-      const iw = isoWeekNo(r.주시작일);
-      return '<option value="' + r.주시작일 + '">' + iw.y + '년 ' + iw.w + '주차 (' + r.주시작일.slice(5).replace('-','.') + ' ~ ' + r.주종료일.slice(5).replace('-','.') + ')' + (i === 0 ? ' · 최신' : '') + '</option>';
+    const fDesc = fWeeks.slice().reverse();
+    fSel.innerHTML = fDesc.map(function(r){
+      return '<option value="' + r.주시작일 + '">' + r.주시작일 + ' ~ ' + r.주종료일 + '</option>';
     }).join('');
     if (prevSel && fWeeks.some(function(r){ return r.주시작일 === prevSel; })) fSel.value = prevSel;
     function renderFunnel(){
       const base = fWeeks.find(function(r){ return r.주시작일 === fSel.value; }) || last;
       const isLatest = base.주시작일 === last.주시작일;
+      const idx = fDesc.findIndex(function(r){ return r.주시작일 === base.주시작일; });
+      document.getElementById('funnelPrevBtn').disabled = idx >= fDesc.length - 1;
+      document.getElementById('funnelNextBtn').disabled = idx <= 0;
+      document.getElementById('funnelLatestBtn').disabled = idx <= 0;
+      document.getElementById('funnelSubhead').textContent =
+        (isLatest ? '최신 주차' : '선택 주차') + '(' + weekLabel(base) + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
+
+      // KPI 카드
+      const convRate = pct(base.이용자수, base.방문자수);
+      const kpiDefs = [
+        ['방문자수', fmtNum(base.방문자수)],
+        ['설치수', fmtNum(base.설치수)],
+        ['가입수', fmtNum(base.가입수)],
+        ['이용자수', fmtNum(base.이용자수)],
+        ['구매전환율(이용자수/방문자수)', fmtPct(convRate)],
+      ];
+      document.getElementById('funnelKpiGrid').innerHTML = kpiDefs.map(function(d){
+        return '<div class="kpi-card"><div class="kpi-label">' + d[0] + '</div><div class="kpi-value">' + d[1] + '</div></div>';
+      }).join('');
+
       document.getElementById('funnelLabelCur').textContent = isLatest ? '이번주' : '선택 주차';
       document.getElementById('funnelLabelPrev').textContent = isLatest ? '전주' : '직전 주';
       // 주간 퍼널 차트 3종 (이번주 / 전주 / 전년동기)
@@ -582,6 +589,14 @@
       });
     }
     fSel.onchange = renderFunnel;
+    function stepWeek(delta){
+      const i = fDesc.findIndex(function(r){ return r.주시작일 === fSel.value; });
+      const j = Math.min(Math.max(i + delta, 0), fDesc.length - 1);
+      if (fDesc[j]) { fSel.value = fDesc[j].주시작일; renderFunnel(); }
+    }
+    document.getElementById('funnelPrevBtn').onclick = function(){ stepWeek(1); };
+    document.getElementById('funnelNextBtn').onclick = function(){ stepWeek(-1); };
+    document.getElementById('funnelLatestBtn').onclick = function(){ if (fDesc[0]) { fSel.value = fDesc[0].주시작일; renderFunnel(); } };
     renderFunnel();
 
     // 트렌드 차트 공통 라벨
