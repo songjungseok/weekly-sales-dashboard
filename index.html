@@ -683,8 +683,12 @@
     document.getElementById('funnelModeMonth').onclick = function(){ setMode('month'); };
     renderFunnel();
 
+    // 트렌드 차트 대상: 최신 주가 속한 ISO 연도의 1주차부터 최신 주까지
+    function isoYearOf(ymd){ const t = new Date(ymd + 'T00:00:00'); t.setDate(t.getDate() + 3); return t.getFullYear(); }
+    const trendYear = isoYearOf(last.주시작일);
+    const trendRows = rows.filter(function(r){ return isoYearOf(r.주시작일) === trendYear; });
     // 트렌드 차트 공통 라벨 — 02 주간 실적과 동일하게 "N주" + (그 주에 1일이 포함되면) "M월"
-    const labels = last12.map(function(r){
+    const labels = trendRows.map(function(r){
       const t = new Date(r.주시작일 + 'T00:00:00'); const u = new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()));
       const dn = u.getUTCDay() || 7; u.setUTCDate(u.getUTCDate() + 4 - dn);
       const wl = Math.ceil(((u - new Date(Date.UTC(u.getUTCFullYear(), 0, 1))) / 86400000 + 1) / 7) + '주';
@@ -700,7 +704,7 @@
     trendVisitorChart = new Chart(document.getElementById('funnelTrendVisitor').getContext('2d'), {
       type: 'line',
       data: { labels: labels, datasets: [{
-        label: '방문자수', data: last12.map(function(r){ return r.방문자수; }),
+        label: '방문자수', data: trendRows.map(function(r){ return r.방문자수; }),
         borderColor: '#1B2A4A', backgroundColor: 'rgba(27,42,74,0.08)', fill: true, tension: 0.25,
       }] },
       options: { responsive: true, maintainAspectRatio: false,
@@ -712,8 +716,8 @@
     trendAcqChart = new Chart(document.getElementById('funnelTrendAcq').getContext('2d'), {
       type: 'line',
       data: { labels: labels, datasets: [
-        { label: '설치수', data: last12.map(function(r){ return r.설치수; }), borderColor: '#3f7cac', backgroundColor: 'rgba(63,124,172,0.08)', tension: 0.25 },
-        { label: '가입수', data: last12.map(function(r){ return r.가입수; }), borderColor: '#2dd4bf', backgroundColor: 'rgba(45,212,191,0.08)', tension: 0.25 },
+        { label: '설치수', data: trendRows.map(function(r){ return r.설치수; }), borderColor: '#3f7cac', backgroundColor: 'rgba(63,124,172,0.08)', tension: 0.25 },
+        { label: '가입수', data: trendRows.map(function(r){ return r.가입수; }), borderColor: '#2dd4bf', backgroundColor: 'rgba(45,212,191,0.08)', tension: 0.25 },
       ] },
       options: { responsive: true, maintainAspectRatio: false,
         scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
@@ -723,8 +727,8 @@
     trendViewChart = new Chart(document.getElementById('funnelTrendView').getContext('2d'), {
       type: 'line',
       data: { labels: labels, datasets: [
-        { label: '스팟조회수', data: last12.map(function(r){ return r.스팟조회수; }), borderColor: '#8a97a8', backgroundColor: 'rgba(138,151,168,0.08)', tension: 0.25 },
-        { label: '차량조회수', data: last12.map(function(r){ return r.차량조회수; }), borderColor: '#e08e45', backgroundColor: 'rgba(224,142,69,0.08)', tension: 0.25 },
+        { label: '스팟조회수', data: trendRows.map(function(r){ return r.스팟조회수; }), borderColor: '#8a97a8', backgroundColor: 'rgba(138,151,168,0.08)', tension: 0.25 },
+        { label: '차량조회수', data: trendRows.map(function(r){ return r.차량조회수; }), borderColor: '#e08e45', backgroundColor: 'rgba(224,142,69,0.08)', tension: 0.25 },
       ] },
       options: { responsive: true, maintainAspectRatio: false,
         scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
@@ -734,7 +738,7 @@
     trendConvChart = new Chart(document.getElementById('funnelTrendConv').getContext('2d'), {
       type: 'line',
       data: { labels: labels, datasets: [{
-        label: '구매전환율(%)', data: last12.map(function(r){ return pct(r.이용자수_일별합, r.방문자수); }),
+        label: '구매전환율(%)', data: trendRows.map(function(r){ return pct(r.이용자수_일별합, r.방문자수); }),
         borderColor: '#c0392b', backgroundColor: 'rgba(192,57,43,0.08)', fill: true, tension: 0.25,
       }] },
       options: { responsive: true, maintainAspectRatio: false,
