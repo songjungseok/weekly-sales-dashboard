@@ -404,7 +404,34 @@
 <div class="kpi-grid kpi-grid-5" id="funnelKpiGrid"></div>
 
 <div class="section">
-  <h2 id="funnelSectionTitle">🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
+  <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:14px;">
+    <h2 id="funnelSectionTitle" style="margin-bottom:0;">🔻 주간 퍼널 (방문 → 스팟조회 → 차량조회 → 예약행동 / 이용)</h2>
+    <button class="navbtn" id="funnelDefBtn" type="button" aria-expanded="false">ⓘ 기준보기</button>
+  </div>
+  <div id="funnelDefPanel" style="display:none; margin-bottom:14px; border:1px solid #d3e2f5; background:#f5f9fe; padding:12px 14px;">
+    <div style="font-size:12.5px; font-weight:700; color:#1B2A4A; margin-bottom:8px;">📘 지표 집계 기준 <span style="font-weight:400; color:#888;">— 출처: CMS-퍼포먼스 데이터 · <code>{연도}_CRM</code> 탭 일별 값</span></div>
+    <table style="width:100%; border-collapse:collapse; font-size:12px; background:#fff;">
+      <thead><tr style="background:#eef4fc;">
+        <th style="padding:6px 9px; border:1px solid #d3e2f5; text-align:left; width:120px;">지표</th>
+        <th style="padding:6px 9px; border:1px solid #d3e2f5; text-align:left; width:170px;">원천 컬럼 (코드)</th>
+        <th style="padding:6px 9px; border:1px solid #d3e2f5; text-align:left;">집계 기준</th>
+      </tr></thead>
+      <tbody>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>방문자수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">방문자수 (<code>uv</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">일별 순방문자(UV)를 기간 내 합산 — 같은 사람이 여러 날 방문하면 날짜마다 1명씩 집계</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>스팟조회자수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">스팟조회자수 (<code>dfn_spotselect_unq</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">디파이너리 스팟 선택(조회) 이벤트를 발생시킨 일별 순사용자 수를 기간 내 합산</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>차량조회자수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">차량조회자수 (<code>dfn_carselect_unq</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">디파이너리 차량 선택(조회) 이벤트를 발생시킨 일별 순사용자 수를 기간 내 합산</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>예약행동자수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">예약행동자수 (<code>dfn_purchase</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">디파이너리 예약(구매) 이벤트 기준 일별 값을 기간 내 합산 — 차량조회자수에서 갈라지는 분기 ①</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>이용자수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">이용자수 (<code>mau</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">CMS 기준 일별 이용 회원 수를 기간 내 합산 — 차량조회자수에서 갈라지는 분기 ②</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>설치수 / 가입수</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">설치수 (<code>dfn_install</code>) / 가입수 (<code>cms_signup</code>)</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">일별 설치·가입 건수를 기간 내 합산 (KPI 카드)</td></tr>
+        <tr><td style="padding:6px 9px; border:1px solid #e3eaf3;"><b>구매전환율</b></td><td style="padding:6px 9px; border:1px solid #e3eaf3;">—</td><td style="padding:6px 9px; border:1px solid #e3eaf3;">이용자수 ÷ 방문자수 × 100 (둘 다 일별 합산값 기준)</td></tr>
+      </tbody>
+    </table>
+    <div style="font-size:11.5px; color:#666; margin-top:8px; line-height:1.6;">
+      · <b>주간</b>: 월~일 7일 합산 / 전주 = 7일 전 주 / 전년동기 = 364일 전 같은 요일 구성의 주<br>
+      · <b>월간</b>: 달력 월(1일~말일) 합산 / 진행 중인 달은 경과 일수까지만 합산 / KPI 증감은 진행 중인 달이면 전월 같은 일수와 비교<br>
+      · 일별 값의 합이므로 기간 내 중복 인원이 포함되며, 대여내역 기반 이용자수(02 주간 실적 등)와는 기준이 다릅니다.
+    </div>
+  </div>
   <div class="funnel-3col">
     <div class="funnel-panel">
       <div class="funnel-panel-title"><b id="funnelLabelCur">이번주</b> <span id="funnelTitleCur"></span></div>
@@ -679,6 +706,11 @@
       buildOptions(null);
       renderFunnel();
     }
+    document.getElementById('funnelDefBtn').onclick = function(){
+      const pnl = document.getElementById('funnelDefPanel'); const open = pnl.style.display === 'none';
+      pnl.style.display = open ? '' : 'none'; this.setAttribute('aria-expanded', open ? 'true' : 'false');
+      this.textContent = open ? 'ⓘ 기준닫기' : 'ⓘ 기준보기';
+    };
     document.getElementById('funnelModeWeek').onclick = function(){ setMode('week'); };
     document.getElementById('funnelModeMonth').onclick = function(){ setMode('month'); };
     renderFunnel();
