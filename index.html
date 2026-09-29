@@ -755,6 +755,34 @@
         scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
     });
 
+    // 두 번째 데이터셋 포인트 위에 "첫 번째 대비 두 번째 %" 라벨을 그리는 공용 플러그인
+    // (포인트 간격이 좁으면 겹치지 않도록 일정 간격으로만 표시, 마지막 주는 항상 표시. 전체 값은 툴팁에서 확인)
+    function ratioLabelPlugin(id, color){
+      return { id: id, afterDatasetsDraw: function(chart){
+        const meta = chart.getDatasetMeta(1); if (!meta || meta.hidden) return;
+        const num = chart.data.datasets[1].data, den = chart.data.datasets[0].data;
+        const c = chart.ctx; c.save();
+        c.font = '600 9px sans-serif'; c.fillStyle = color; c.textAlign = 'center'; c.textBaseline = 'bottom';
+        const pts = meta.data; const gap = pts.length > 1 ? Math.abs(pts[1].x - pts[0].x) : 99;
+        const stride = Math.max(1, Math.ceil(26 / (gap || 1)));
+        let lastIdx = -1; for (let k = num.length - 1; k >= 0; k--) if (num[k] != null) { lastIdx = k; break; }
+        pts.forEach(function(pt, i){
+          const r = pct(num[i], den[i]);
+          if (r == null || num[i] == null) return;
+          if (i !== lastIdx && (lastIdx - i) % stride !== 0) return;
+          c.fillText(Math.round(r) + '%', pt.x, pt.y - 5);
+        });
+        c.restore();
+      } };
+    }
+    function ratioTooltip(desc){
+      return { callbacks: { label: function(ctx){
+        let t = ctx.dataset.label + ': ' + fmtNum(ctx.parsed.y);
+        if (ctx.datasetIndex === 1) { const d0 = ctx.chart.data.datasets[0].data[ctx.dataIndex]; const r = pct(ctx.parsed.y, d0); if (r != null) t += ' (' + desc + ' ' + r.toFixed(1) + '%)'; }
+        return t;
+      } } };
+    }
+
     if (trendAcqChart) trendAcqChart.destroy();
     trendAcqChart = new Chart(document.getElementById('funnelTrendAcq').getContext('2d'), {
       type: 'line',
@@ -763,7 +791,10 @@
         { label: '가입수', data: trendRows.map(function(r){ return r.가입수; }), borderColor: '#2dd4bf', backgroundColor: 'rgba(45,212,191,0.08)', tension: 0.25 },
       ] },
       options: { responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
+        layout: { padding: { top: 14 } },
+        plugins: { tooltip: ratioTooltip('설치수 대비 가입전환율') },
+        scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } },
+      plugins: [ratioLabelPlugin('signupRatioLabels', '#149c8a')]
     });
 
     if (trendViewChart) trendViewChart.destroy();
@@ -775,33 +806,9 @@
       ] },
       options: { responsive: true, maintainAspectRatio: false,
         layout: { padding: { top: 14 } },
-        plugins: { tooltip: { callbacks: { label: function(ctx){
-          let t = ctx.dataset.label + ': ' + fmtNum(ctx.parsed.y);
-          if (ctx.datasetIndex === 1) { const sp = ctx.chart.data.datasets[0].data[ctx.dataIndex]; const r = pct(ctx.parsed.y, sp); if (r != null) t += ' (스팟조회수 대비 ' + r.toFixed(1) + '%)'; }
-          return t;
-        } } } },
+        plugins: { tooltip: ratioTooltip('스팟조회수 대비') },
         scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } },
-      plugins: [{
-        // 차량조회수 포인트 위에 "스팟조회수 대비 차량조회수 %" 표시
-        id: 'carViewRatioLabels',
-        afterDatasetsDraw: function(chart){
-          const meta = chart.getDatasetMeta(1); if (!meta || meta.hidden) return;
-          const car = chart.data.datasets[1].data, spot = chart.data.datasets[0].data;
-          const c = chart.ctx; c.save();
-          c.font = '600 9px sans-serif'; c.fillStyle = '#c96f22'; c.textAlign = 'center'; c.textBaseline = 'bottom';
-          // 포인트 간격이 좁으면 라벨이 겹치지 않도록 일정 간격으로만 표시(마지막 주는 항상 표시). 전체 값은 툴팁에서 확인.
-          const pts = meta.data; const gap = pts.length > 1 ? Math.abs(pts[1].x - pts[0].x) : 99;
-          const stride = Math.max(1, Math.ceil(26 / (gap || 1)));
-          const lastIdx = (function(){ for (let k = car.length - 1; k >= 0; k--) if (car[k] != null) return k; return -1; })();
-          pts.forEach(function(pt, i){
-            const r = pct(car[i], spot[i]);
-            if (r == null || car[i] == null) return;
-            if (i !== lastIdx && ((lastIdx - i) % stride !== 0 || lastIdx - i < stride)) return;
-            c.fillText(Math.round(r) + '%', pt.x, pt.y - 5);
-          });
-          c.restore();
-        }
-      }]
+      plugins: [ratioLabelPlugin('carViewRatioLabels', '#c96f22')]
     });
 
     if (trendConvChart) trendConvChart.destroy();
