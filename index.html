@@ -478,29 +478,6 @@
   </div>
 </div>
 
-<div class="section">
-  <h2>📋 주차별 퍼널 지표 (최근 12주)</h2>
-  <div style="overflow-x:auto;">
-    <table class="policy-compare-table" id="funnelTable" style="width:100%; border-collapse:collapse; font-size:12.5px;">
-      <thead>
-        <tr style="background:#f4f6f8;">
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd; text-align:left;">주차</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">방문자수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">설치수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">가입수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">스팟조회수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">차량조회수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">이용자수</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">설치율</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">가입전환율</th>
-          <th style="padding:8px 10px; border-bottom:1px solid #ddd;">구매전환율</th>
-        </tr>
-      </thead>
-      <tbody id="funnelTableBody"></tbody>
-    </table>
-  </div>
-</div>
-
 <script>
 (function(){
   let rows = null;
@@ -825,24 +802,7 @@
           x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
     });
 
-    // 테이블
-    document.getElementById('funnelTableBody').innerHTML = last12.slice().reverse().map(function(r){
-      const ir = pct(r.설치수, r.방문자수);
-      const sr = pct(r.가입수, r.설치수);
-      const cr = pct(r.이용자수_일별합, r.방문자수);
-      return '<tr>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee;">' + weekLabel(r) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.방문자수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.설치수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.가입수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.스팟조회수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.차량조회수) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtNum(r.이용자수_일별합) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(ir) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(sr) + '</td>' +
-        '<td style="padding:7px 10px; border-bottom:1px solid #eee; text-align:right;">' + fmtPct(cr) + '</td>' +
-        '</tr>';
-    }).join('');
+    // (주차별 퍼널 지표 표는 삭제됨)
   }
 
   window.refreshPage1 = function(){ render(); };
