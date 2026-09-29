@@ -789,9 +789,14 @@
           const car = chart.data.datasets[1].data, spot = chart.data.datasets[0].data;
           const c = chart.ctx; c.save();
           c.font = '600 9px sans-serif'; c.fillStyle = '#c96f22'; c.textAlign = 'center'; c.textBaseline = 'bottom';
-          meta.data.forEach(function(pt, i){
+          // 포인트 간격이 좁으면 라벨이 겹치지 않도록 일정 간격으로만 표시(마지막 주는 항상 표시). 전체 값은 툴팁에서 확인.
+          const pts = meta.data; const gap = pts.length > 1 ? Math.abs(pts[1].x - pts[0].x) : 99;
+          const stride = Math.max(1, Math.ceil(26 / (gap || 1)));
+          const lastIdx = (function(){ for (let k = car.length - 1; k >= 0; k--) if (car[k] != null) return k; return -1; })();
+          pts.forEach(function(pt, i){
             const r = pct(car[i], spot[i]);
             if (r == null || car[i] == null) return;
+            if (i !== lastIdx && ((lastIdx - i) % stride !== 0 || lastIdx - i < stride)) return;
             c.fillText(Math.round(r) + '%', pt.x, pt.y - 5);
           });
           c.restore();
