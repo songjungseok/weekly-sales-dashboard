@@ -774,7 +774,29 @@
         { label: '차량조회수', data: trendRows.map(function(r){ return r.차량조회수; }), borderColor: '#e08e45', backgroundColor: 'rgba(224,142,69,0.08)', tension: 0.25 },
       ] },
       options: { responsive: true, maintainAspectRatio: false,
-        scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
+        layout: { padding: { top: 14 } },
+        plugins: { tooltip: { callbacks: { label: function(ctx){
+          let t = ctx.dataset.label + ': ' + fmtNum(ctx.parsed.y);
+          if (ctx.datasetIndex === 1) { const sp = ctx.chart.data.datasets[0].data[ctx.dataIndex]; const r = pct(ctx.parsed.y, sp); if (r != null) t += ' (스팟조회수 대비 ' + r.toFixed(1) + '%)'; }
+          return t;
+        } } } },
+        scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } },
+      plugins: [{
+        // 차량조회수 포인트 위에 "스팟조회수 대비 차량조회수 %" 표시
+        id: 'carViewRatioLabels',
+        afterDatasetsDraw: function(chart){
+          const meta = chart.getDatasetMeta(1); if (!meta || meta.hidden) return;
+          const car = chart.data.datasets[1].data, spot = chart.data.datasets[0].data;
+          const c = chart.ctx; c.save();
+          c.font = '600 9px sans-serif'; c.fillStyle = '#c96f22'; c.textAlign = 'center'; c.textBaseline = 'bottom';
+          meta.data.forEach(function(pt, i){
+            const r = pct(car[i], spot[i]);
+            if (r == null || car[i] == null) return;
+            c.fillText(Math.round(r) + '%', pt.x, pt.y - 5);
+          });
+          c.restore();
+        }
+      }]
     });
 
     if (trendConvChart) trendConvChart.destroy();
