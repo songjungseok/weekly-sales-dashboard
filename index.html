@@ -2358,7 +2358,7 @@
 (function(){
   let DATA = null;
   try { DATA = JSON.parse(document.getElementById('cohort-data').textContent); } catch(e) { DATA = null; }
-  let selYear = 'all';
+  let selYear = null; // 첫 진입 시 가장 최근 연도(예: 2026년)를 기본 선택
   function prevYearKey(k){ return (+k.slice(0,4) - 1) + k.slice(4); }
   function rateAt(k, i){ const c = DATA.cohorts[k]; return c && c.rates[i] != null ? c.rates[i] : null; }
   function isPartial(k, i){ // 관측 마지막 달(진행 중인 달)에 해당하는 칸
@@ -2382,6 +2382,7 @@
     if (!DATA || !DATA.cohorts) { tbl.innerHTML = '<tr><td>데이터 없음</td></tr>'; return; }
     const keys = Object.keys(DATA.cohorts).sort();
     const years = Array.from(new Set(keys.map(function(k){ return k.slice(0,4); })));
+    if (selYear == null) selYear = years[years.length - 1] || 'all';
     document.getElementById('cohortYearBar').innerHTML = ['all'].concat(years).map(function(y){
       const on = y === selYear;
       return '<button class="navbtn" data-y="' + y + '" style="' + (on ? 'background:#1B2A4A;color:#fff;border-color:#1B2A4A;' : '') + '">' + (y === 'all' ? '전체' : y + '년') + '</button>';
