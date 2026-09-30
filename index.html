@@ -2334,9 +2334,7 @@
       </div>
       <div class="section">
         <h2>📊 재구매 주기</h2>
-        <div style="font-size:12px; color:#777; margin:-4px 0 12px; line-height:1.6;">※ <b>신규 회원</b>이 첫 이용 후 두 번째로 이용하기까지 걸린 기간과, <b>기존 회원</b>의 이용과 이용 사이 간격을 봅니다. 신규 비교는 두 해 모두 관측 기간이 충분한 1~6월 코호트끼리, 기존 회원 간격은 같은 달끼리 비교합니다.</div>
-        <div class="kpi-grid" id="rpKpi" style="grid-template-columns:repeat(4,1fr);"></div>
-        <div class="charts-row" style="margin-top:14px;">
+        <div class="charts-row">
           <div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
               <h2 style="margin:0;">📊 신규 회원 — 두 번째 이용까지 걸린 기간 (첫 이용월별)</h2>
@@ -2364,8 +2362,6 @@
             · <b>데이터</b>: 왕복 카셰어링 대여내역(리턴프리 편도 제외) · 진행 중인 달은 경과 일수까지 부분 집계 · 기준일 2026-09-27(자동 갱신 대상 아님)
           </div><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
         </div>
-        <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
-          <h2 style="margin:0 0 12px;">📊 코호트별 30일 / 90일 내 재이용률</h2><div class="chart-box"><canvas id="rpCohort"></canvas></div></div>
       </div>
     </div>
 <style>
@@ -2528,33 +2524,9 @@
   }
   function render(){
     if (!D) return;
-    const h25 = D.hist['2025'], h26 = D.hist['2026'];
-    // 기존 회원 간격: 전년 같은 달이 있는 최근 3개월 평균 비교
-    const gm = Object.keys(D.gap).filter(function(m){ return m.startsWith('2026') && D.gap['2025' + m.slice(4)] && m !== D.observedThrough.slice(0,7); }).slice(-3);
-    const avg = function(a){ return a.reduce(function(x,y){ return x+y; }, 0) / a.length; };
-    const g26 = gm.length ? avg(gm.map(function(m){ return D.gap[m].median; })) : null;
-    const g25 = gm.length ? avg(gm.map(function(m){ return D.gap['2025' + m.slice(4)].median; })) : null;
-    const kpis = [
-      ['신규 · 30일 내 재이용률', f1(h26.w30) + '%' + delta(h26.w30, h25.w30, '%p', true)],
-      ['신규 · 90일 내 재이용률', f1(h26.w90) + '%' + delta(h26.w90, h25.w90, '%p', true)],
-      ['신규 · 두 번째 이용까지 중앙값', f1(h26.median90) + '일' + delta(h26.median90, h25.median90, '일', false)],
-      ['기존 · 이용 간격 중앙값 (' + (gm.length ? gm[0].slice(5) + '~' + gm[gm.length-1].slice(5) + '월' : '-') + ')', f1(g26) + '일' + delta(g26, g25, '일', false)],
-    ];
-    document.getElementById('rpKpi').innerHTML = kpis.map(function(k){ return '<div class="kpi-card"><div class="kpi-label">' + k[0] + '</div><div class="kpi-value">' + k[1] + '</div></div>'; }).join('');
     Object.keys(charts).forEach(function(k){ charts[k].destroy(); });
     // 1) 첫 이용월별 두 번째 이용까지 기간 (평균/중앙값, 연도 비교 선그래프)
     renderSecondUse();
-    // 2) 코호트별 추이
-    const ck = Object.keys(D.cohorts).sort();
-    charts.c = new Chart(document.getElementById('rpCohort').getContext('2d'), {
-      type: 'line',
-      data: { labels: ck.map(function(k){ return k.slice(2).replace('-','.'); }), datasets: [
-        { label: '30일 내', data: ck.map(function(k){ return D.cohorts[k].w30; }), borderColor: '#1B2A4A', backgroundColor: '#1B2A4A', tension: 0.25, spanGaps: false },
-        { label: '90일 내', data: ck.map(function(k){ return D.cohorts[k].w90; }), borderColor: '#5C8AA6', backgroundColor: '#5C8AA6', tension: 0.25, spanGaps: false } ] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { tooltip: { callbacks: { label: function(c){ return c.dataset.label + ' 재이용률: ' + c.parsed.y + '%'; } } } },
-        scales: { y: { ticks: { callback: function(v){ return v + '%'; } } }, x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
-    });
     // 3) 기존 회원 간격: 월(1~12) 기준 연도 겹쳐 보기
     const months = Array.from({length:12}, function(_, i){ return String(i+1).padStart(2,'0'); });
     const gb = document.getElementById('rpGapStatBar'); gb.innerHTML = '';
