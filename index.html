@@ -2647,7 +2647,7 @@
           lines.push({ w: Math.abs(pct), html: chip(s) + '<b>' + s + '</b> ' + n(p) + '명 → ' + n(c) + '명 <b style="color:' + col + ';">(' + (d > 0 ? '+' : '') + n(d) + '명, ' + (d > 0 ? '+' : '') + pct.toFixed(1) + '%)</b>' + (st.cnt >= 2 ? ' · <b>' + st.cnt + '개월 연속 ' + (st.dir > 0 ? '증가' : '감소') + '</b>' : '') });
         }
       });
-      lines.sort(function(a, b){ return b.w - a.w; });
+      // 세그먼트 순서(VIP → 충성 → 잠재 충성 → …) 그대로 표시
       const flows = [];
       SEG.concat([NEW]).forEach(function(f){ const row = C.migration && C.migration[f]; if (!row) return;
         SEG.concat([OUT]).forEach(function(t){ if (f !== t && row[t]) flows.push({ f: f, t: t, v: row[t] }); }); });
