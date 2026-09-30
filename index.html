@@ -2388,8 +2388,12 @@
           <div class="chart-box" style="height:300px;"><canvas id="rfmTrend"></canvas></div>
         </div>
         <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
-          <h2 style="margin:0 0 12px;">📊 세그먼트 이동 (전월 → 이번 달)</h2>
-                    <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px;"></table></div>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+            <h2 style="margin:0;">📊 세그먼트 이동 (전월 → 이번 달)</h2>
+            <button class="navbtn" id="rfmMigHelpBtn" type="button" aria-expanded="false">ⓘ 데이터 해석법</button>
+          </div>
+          <div id="rfmMigHelp" style="display:none; margin-bottom:12px; border:1px solid #d3e2f5; background:#eef4fc; padding:12px 14px; font-size:12.5px; color:#333; line-height:1.8;"></div>
+                    <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px; width:100%;"></table></div>
         </div>
       </div>
     </div>
@@ -2686,12 +2690,12 @@
     if (!mig) { tbl.innerHTML = '<tr><td>전월 스냅샷이 없어 이동을 계산할 수 없습니다.</td></tr>'; return; }
     const cols = SEG.concat([OUT]);
     const curLbl = (+sel.slice(5)) + '월', prvLbl = (+ks[idx-1].slice(5)) + '월';
-    let mt = '<tr><th rowspan="2" style="background:none;"></th>' +
+    let mt = '<tr><th rowspan="2" style="background:none; width:120px;"></th>' +
       '<th colspan="' + cols.length + '" style="background:#3f5f86;">이번 달(' + curLbl + ') 세그먼트 →</th><th rowspan="2" style="background:#1a2b3c;">전월 인원</th></tr>' +
       '<tr>' + cols.map(function(c){ return '<th style="background:#1a2b3c; color:#fff;">' + (c === OUT ? '1년 미이용' : c) + '</th>'; }).join('') + '</tr>';
     SEG.concat([NEW]).forEach(function(s){
       const row = mig[s] || {}, tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0);
-      mt += '<tr><td class="c-label">' + s + ' <span style="font-weight:400; color:#999; font-size:10.5px;">(' + prvLbl + ')</span></td>';
+      mt += '<tr><td class="c-label" style="text-align:left; padding-left:8px; width:120px; white-space:nowrap;">' + s + ' <span style="font-weight:400; color:#999; font-size:10.5px;">(' + prvLbl + ')</span></td>';
       cols.forEach(function(c){
         const v = tot ? (row[c] || 0) / tot * 100 : 0, diag = c === s;
         const bad = (['VIP','충성','잠재 충성'].indexOf(s) >= 0) && (['이탈 위험','휴면',OUT].indexOf(c) >= 0);
@@ -2702,10 +2706,29 @@
       mt += '<td style="background:#f7f8fa;">' + n(tot) + '명</td></tr>';
     });
     tbl.innerHTML = mt;
+    // 데이터 해석법 (선택 월 실제 값으로 예시)
+    const pct = function(f, t){ const row = mig[f] || {}, tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0); return { p: tot ? (row[t] || 0) / tot * 100 : 0, v: row[t] || 0, tot: tot }; };
+    const ex = function(f, t, verb){ const x = pct(f, t); return '<b>' + prvLbl + ' ' + f + '</b> 중 ' + curLbl + '에 <b>' + x.p.toFixed(1) + '%</b>(' + n(x.v) + '명)는 <b>' + (t === OUT ? '1년 미이용' : t) + '</b>' + verb; };
+    document.getElementById('rfmMigHelp').innerHTML =
+      '<div style="font-weight:700; color:#1B2A4A; margin-bottom:4px;">📘 표 읽는 법</div>' +
+      '· <b>왼쪽 세로 이름 = 전월(' + prvLbl + ') 세그먼트</b>, <b>위쪽 가로 이름 = 이번 달(' + curLbl + ') 세그먼트</b>입니다.<br>' +
+      '· 칸의 값은 <b>전월 그 세그먼트 인원 대비 비중</b>이라, 한 줄을 가로로 더하면 100%입니다(맨 오른쪽 "전월 인원"이 분모).<br>' +
+      '· 진한 남색 대각선 칸 = 같은 세그먼트에 그대로 머문 비율 · 연한 빨강 칸 = 상위 세그먼트(VIP·충성·잠재 충성)에서 이탈 쪽(이탈 위험·휴면·1년 미이용)으로 간 칸 · 칸에 마우스를 올리면 인원수가 나옵니다.<br>' +
+      '<div style="font-weight:700; color:#1B2A4A; margin:8px 0 4px;">🔎 예시 (' + prvLbl + ' → ' + curLbl + ')</div>' +
+      '· ' + ex('VIP', 'VIP', '로 유지') + '<br>' +
+      '· ' + ex('VIP', '충성', '으로 전환') + '<br>' +
+      '· ' + ex('충성', 'VIP', '로 상승') + '<br>' +
+      '· ' + ex('충성', '관심 필요', '로 하락') + '<br>' +
+      '· ' + ex('신규 유입', '신규·1회', '로 시작') + ' — "신규 유입"은 ' + prvLbl + ' 스냅샷엔 없고 ' + curLbl + '에 새로 잡힌 회원입니다.<br>' +
+      '· ' + ex('휴면', OUT, '로 빠짐') + ' — 최근 365일 이용이 없어 스냅샷에서 사라진 회원입니다.';
   }
   document.getElementById('rfmDefBtn').onclick = function(){
     const pnl = document.getElementById('rfmDefPanel'); const open = pnl.style.display === 'none';
     pnl.style.display = open ? '' : 'none'; this.textContent = open ? 'ⓘ 기준닫기' : 'ⓘ 기준정의';
+  };
+  document.getElementById('rfmMigHelpBtn').onclick = function(){
+    const pnl = document.getElementById('rfmMigHelp'); const open = pnl.style.display === 'none';
+    pnl.style.display = open ? '' : 'none'; this.textContent = open ? 'ⓘ 해석법 닫기' : 'ⓘ 데이터 해석법';
   };
   function step(d){ const ks = keys(), i = ks.indexOf(sel) + d; if (ks[i]) { sel = ks[i]; render(); } }
   document.getElementById('rfmMonthSel').onchange = function(){ sel = this.value; render(); };
