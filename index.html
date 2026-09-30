@@ -2367,7 +2367,7 @@
       </div>
       <div class="section">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
-          <h2 style="margin:0;">📊 RFM 회원 세그먼트 — 월별 관리</h2>
+          <h2 style="margin:0;">📊 RFM 회원 세그먼트</h2>
           <button class="navbtn" id="rfmDefBtn" type="button" aria-expanded="false">ⓘ 기준정의</button>
         </div>
         <div id="rfmDefPanel" style="display:none; margin-bottom:12px; border:1px solid #d3e2f5; background:#eef4fc; padding:12px 14px; font-size:12px; color:#333; line-height:1.75;"></div>
@@ -2636,15 +2636,14 @@
       '· <b>세그먼트</b>: ' + SEG.map(function(s){ return '<b>' + s + '</b>(' + RULE[s] + ')'; }).join(' · ') + '<br>' +
       '· <b>세그먼트 이동</b>: 전월 스냅샷과 같은 회원을 이어 붙여 비교. "신규 유입" = 전월 스냅샷엔 없고 이번 달에 새로 잡힌 회원, "1년 미이용" = 최근 365일 이용이 없어 스냅샷에서 빠진 회원<br>' +
       '· <b>기간</b>: 대여내역이 2024년 12월부터 있어 365일이 모두 채워지는 <b>2025년 11월</b> 스냅샷부터 표시 · 전년 동월 비교는 2026년 11월부터 가능<br>' +
-      '· <b>인사이트 기준</b>: 전월 대비 ±3% 이상이거나 2개월 이상 연속 같은 방향으로 움직인 세그먼트를 표시 · 빨강 = 좋은 방향, 파랑 = 나쁜 방향(상위 세그먼트는 증가가 좋고, 관심 필요·이탈 위험·휴면은 감소가 좋음)';
+      '· <b>인사이트 기준</b>: 전월 대비 ±3% 이상이거나 2개월 이상 연속 같은 방향으로 움직인 세그먼트를 표시 · 빨강 = 증가, 파랑 = 감소';
     let ins = '';
     if (P) {
       const lines = [];
       SEG.forEach(function(s){
         const c = C.segments[s].n, p = P.segments[s].n, d = c - p, pct = p ? d / p * 100 : 0, st = streak(s, sel);
         if (Math.abs(pct) >= 3 || st.cnt >= 2) {
-          const good = (d > 0 ? 1 : -1) * GOOD[s] > 0;
-          const col = good ? '#d0342c' : '#2266cc';
+          const col = d > 0 ? '#d0342c' : '#2266cc';   // 증가 = 빨강, 감소 = 파랑
           lines.push({ w: Math.abs(pct), html: chip(s) + '<b>' + s + '</b> ' + n(p) + '명 → ' + n(c) + '명 <b style="color:' + col + ';">(' + (d > 0 ? '+' : '') + n(d) + '명, ' + (d > 0 ? '+' : '') + pct.toFixed(1) + '%)</b>' + (st.cnt >= 2 ? ' · <b>' + st.cnt + '개월 연속 ' + (st.dir > 0 ? '증가' : '감소') + '</b>' : '') });
         }
       });
@@ -2667,7 +2666,7 @@
     let h = '<thead><tr><th style="text-align:left;">세그먼트</th><th style="text-align:left;">기준</th><th>회원수</th><th>회원 비중</th><th>전월 대비</th><th>매출(부가세 제외, 1년)</th><th>매출 비중</th><th>평균 이용횟수</th><th>1인당 매출</th><th>마지막 이용 후</th></tr></thead><tbody>';
     SEG.forEach(function(s){
       const c = C.segments[s], p = P ? P.segments[s] : null, d = p ? c.n - p.n : null;
-      const good = d != null && (d > 0 ? 1 : -1) * GOOD[s] > 0, dc = !d ? '#888' : (good ? '#d0342c' : '#2266cc');
+      const dc = !d ? '#888' : (d > 0 ? '#d0342c' : '#2266cc');   // 증가 = 빨강, 감소 = 파랑
       h += '<tr><td style="text-align:left; font-weight:700;">' + chip(s) + s + '</td><td style="text-align:left; color:#666; font-size:12px;">' + RULE[s] + '</td>' +
         '<td>' + n(c.n) + '명</td><td>' + c.share + '%</td><td style="color:' + dc + '; font-weight:700;">' + (d == null ? '-' : (d > 0 ? '▲' : (d < 0 ? '▼' : '')) + n(Math.abs(d)) + ' (' + (d >= 0 ? '+' : '') + (p.n ? (d / p.n * 100).toFixed(1) : '0') + '%)') + '</td>' +
         '<td>' + won(c.rev) + '</td><td>' + c.revShare + '%</td><td>' + c.avgF + '회</td><td>' + won(c.avgM) + '</td><td>' + Math.round(c.avgR) + '일</td></tr>';
