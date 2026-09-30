@@ -2708,7 +2708,7 @@
     tbl.innerHTML = mt;
     // 데이터 해석법 (선택 월 실제 값으로 예시)
     const pct = function(f, t){ const row = mig[f] || {}, tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0); return { p: tot ? (row[t] || 0) / tot * 100 : 0, v: row[t] || 0, tot: tot }; };
-    const ex = function(f, t, verb){ const x = pct(f, t); return '<b>' + prvLbl + ' ' + f + '</b> 중 ' + curLbl + '에 <b>' + x.p.toFixed(1) + '%</b>(' + n(x.v) + '명)는 <b>' + (t === OUT ? '1년 미이용' : t) + '</b>' + verb; };
+    const ex = function(f, t, verb){ const x = pct(f, t); return '<b>' + prvLbl + ' ' + f + '</b> 중 ' + curLbl + '에 <b>' + x.p.toFixed(1) + '%</b>(' + n(x.v) + '명)는 <b>' + (t === OUT ? '1년 미이용' : t) + '</b>' + (t === OUT ? '으로 빠짐' : verb); };
     document.getElementById('rfmMigHelp').innerHTML =
       '<div style="font-weight:700; color:#1B2A4A; margin-bottom:4px;">📘 표 읽는 법</div>' +
       '· <b>왼쪽 세로 이름 = 전월(' + prvLbl + ') 세그먼트</b>, <b>위쪽 가로 이름 = 이번 달(' + curLbl + ') 세그먼트</b>입니다.<br>' +
@@ -2719,8 +2719,8 @@
       '· ' + ex('VIP', '충성', '으로 전환') + '<br>' +
       '· ' + ex('충성', 'VIP', '로 상승') + '<br>' +
       '· ' + ex('충성', '관심 필요', '로 하락') + '<br>' +
-      '· ' + ex('신규 유입', '신규·1회', '로 시작') + ' — "신규 유입"은 ' + prvLbl + ' 스냅샷엔 없고 ' + curLbl + '에 새로 잡힌 회원입니다.<br>' +
-      '· ' + ex('휴면', OUT, '로 빠짐') + ' — 최근 365일 이용이 없어 스냅샷에서 사라진 회원입니다.';
+      '· <b>' + curLbl + '에 새로 들어온 회원(신규 유입)</b> 중 <b>' + pct('신규 유입', '신규·1회').p.toFixed(1) + '%</b>(' + n(pct('신규 유입', '신규·1회').v) + '명)는 <b>신규·1회</b>로 시작 — ' + prvLbl + ' 스냅샷엔 없던 회원입니다.<br>' +
+      '· ' + ex('휴면', OUT, '') + ' — 최근 365일 이용이 없어 스냅샷에서 사라진 회원입니다.';
   }
   document.getElementById('rfmDefBtn').onclick = function(){
     const pnl = document.getElementById('rfmDefPanel'); const open = pnl.style.display === 'none';
