@@ -338,6 +338,7 @@
 <script id="funnel-daily-data" type="application/json"></script>
 <script id="cohort-data" type="application/json"></script>
 <script id="repurchase-data" type="application/json"></script>
+<script id="rfm-data" type="application/json"></script>
 <script id="competitor-driving-fee-data" type="application/json"></script>
 <script id="competitor-rental-price-data" type="application/json"></script>
 <script>
@@ -352,6 +353,7 @@
     'funnel-daily-data': 'data/funnel-daily-data.json',
     'cohort-data': 'data/cohort-data.json',
     'repurchase-data': 'data/repurchase-data.json',
+    'rfm-data': 'data/rfm-data.json',
     'competitor-driving-fee-data': 'data/competitor-driving-fee-data.json',
     'competitor-rental-price-data': 'data/competitor-rental-price-data.json'
   };
@@ -2363,6 +2365,24 @@
           </div><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
         </div>
       </div>
+      <div class="section">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+          <h2 style="margin:0;">📊 RFM 회원 세그먼트</h2>
+          <button class="navbtn" id="rfmDefBtn" type="button" aria-expanded="false">ⓘ 기준정의</button>
+        </div>
+        <div id="rfmDefPanel" style="display:none; margin-bottom:12px; border:1px solid #d3e2f5; background:#eef4fc; padding:12px 14px; font-size:12px; color:#333; line-height:1.75;"></div>
+        <div id="rfmSummary" style="font-size:12.5px; color:#333; background:#eef4fc; border:1px solid #d3e2f5; padding:9px 12px; margin-bottom:14px;"></div>
+        <div style="overflow-x:auto;"><table class="policy-compare-table" id="rfmTable" style="width:100%; border-collapse:collapse; font-size:12.5px;"></table></div>
+        <div class="charts-row" style="margin-top:18px;">
+          <div><h2 style="margin:0 0 12px;">📊 세그먼트별 회원 비중 vs 매출 비중</h2><div class="chart-box" style="height:300px;"><canvas id="rfmShare"></canvas></div></div>
+          <div><h2 style="margin:0 0 12px;">📊 최근성(R) × 이용빈도(F) 분포 <span style="font-size:12px; font-weight:400; color:#888;">(칸 = 회원수, 마우스를 올리면 평균 매출)</span></h2><div style="overflow-x:auto;"><table id="rfmGrid" class="cohort-table" style="min-width:0;"></table></div></div>
+        </div>
+        <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
+          <h2 style="margin:0 0 6px;">📊 세그먼트 이동 (3개월 전 → 현재)</h2>
+          <div style="font-size:12px; color:#777; margin-bottom:10px;">행 = 3개월 전 세그먼트, 열 = 현재 세그먼트, 값 = 행 기준 비중(%). 대각선은 그대로 머문 회원입니다.</div>
+          <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px;"></table></div>
+        </div>
+      </div>
     </div>
 <style>
   .cohort-table { border-collapse: separate; border-spacing: 3px; font-size: 11.5px; min-width: 900px; width: 100%; }
@@ -2555,6 +2575,95 @@
       b.textContent = open ? 'ⓘ 기준닫기' : 'ⓘ 기준정의';
     };
   })();
+  const prev = window.refreshPage7;
+  window.refreshPage7 = function(){ if (typeof prev === 'function') prev(); render(); };
+})();
+</script>
+<script>
+(function(){
+  let R = null, chart = null;
+  try { R = JSON.parse(document.getElementById('rfm-data').textContent); } catch(e) { R = null; }
+  const SEG = ['VIP','충성','잠재 충성','신규·1회','관심 필요','이탈 위험','휴면'];
+  const COL = { 'VIP':'#1B2A4A','충성':'#3f5f86','잠재 충성':'#5C8AA6','신규·1회':'#2a9d8f','관심 필요':'#e9a23b','이탈 위험':'#c2536a','휴면':'#9aa6b8','미이용(12개월 이탈)':'#cfd5dd' };
+  const RULE = { 'VIP':'최근 30일 내 이용 · 1년간 10회 이상', '충성':'최근 60일 내 · 5회 이상', '잠재 충성':'최근 60일 내 · 2~4회', '신규·1회':'최근 60일 내 · 1회', '관심 필요':'마지막 이용 61~90일 전', '이탈 위험':'91일 이상 미이용 · 3회 이상 이용하던 회원', '휴면':'91일 이상 미이용 · 1~2회' };
+  const n = function(v){ return v == null ? '-' : Number(v).toLocaleString('ko-KR'); };
+  const won = function(v){ return v == null ? '-' : (v >= 1e8 ? (v/1e8).toFixed(1) + '억' : (v >= 1e4 ? Math.round(v/1e4).toLocaleString('ko-KR') + '만' : n(v))) + '원'; };
+  function chip(s){ return '<span style="display:inline-block;width:10px;height:10px;background:' + COL[s] + ';margin-right:6px;vertical-align:middle;"></span>'; }
+  function render(){
+    if (!R) return;
+    const C = R.current, P = R.prev;
+    // 기준정의
+    document.getElementById('rfmDefPanel').innerHTML =
+      '<div style="font-weight:700; color:#1B2A4A; margin-bottom:6px;">📘 RFM 집계 기준</div>' +
+      '· <b>대상</b>: 기준일(' + R.asOf + ') 이전 <b>최근 365일</b> 동안 왕복 카셰어링을 1회 이상 이용한 회원(회원ID 기준, 리턴프리 편도 제외)<br>' +
+      '· <b>R(최근성)</b>: 마지막 이용(예약 시작일) 후 경과일 → 5점 ≤30일 · 4점 31~60일 · 3점 61~90일 · 2점 91~180일 · 1점 181~365일<br>' +
+      '· <b>F(빈도)</b>: 365일간 예약 건수 → 5점 10회+ · 4점 5~9회 · 3점 3~4회 · 2점 2회 · 1점 1회<br>' +
+      '· <b>M(금액)</b>: 365일간 총청구요금 합(부가세 제외) → 5분위(경계 ' + R.mCuts.map(function(v){ return won(v); }).join(' / ') + ') · 세그먼트 분류는 R·F로 하고 M은 참고 지표로 표시<br>' +
+      '· <b>세그먼트</b>: ' + SEG.map(function(s){ return '<b>' + s + '</b>(' + RULE[s] + ')'; }).join(' · ') + '<br>' +
+      '· <b>비교</b>: 3개월 전(' + R.prevAsOf + ') 기준으로 같은 방식·같은 M 경계로 계산한 스냅샷과 비교. 1년 전 비교는 2024년 2~11월 대여내역 파일이 없어 불가<br>' +
+      '· <b>데이터 기준일</b> ' + R.asOf;
+    // 요약
+    const vip = C.segments['VIP'], loy = C.segments['충성'], risk = C.segments['이탈 위험'];
+    document.getElementById('rfmSummary').innerHTML =
+      '※ 최근 1년 이용 회원 <b>' + n(C.total) + '명</b> 중 <b>VIP·충성 ' + (vip.share + loy.share).toFixed(1) + '%</b>가 매출의 <b>' + (vip.revShare + loy.revShare).toFixed(1) + '%</b>를 만들고 있습니다 · ' +
+      '<b>이탈 위험</b> ' + n(risk.n) + '명(매출 비중 ' + risk.revShare + '%) — 3개월 전 대비 ' + (risk.n - P.segments['이탈 위험'].n >= 0 ? '+' : '') + n(risk.n - P.segments['이탈 위험'].n) + '명';
+    // 표
+    let h = '<thead><tr><th style="text-align:left;">세그먼트</th><th style="text-align:left;">기준</th><th>회원수</th><th>회원 비중</th><th>3개월 전 대비</th><th>매출(부가세 제외)</th><th>매출 비중</th><th>평균 이용횟수</th><th>1인당 매출</th><th>마지막 이용 후</th></tr></thead><tbody>';
+    SEG.forEach(function(s){
+      const c = C.segments[s], p = P.segments[s], d = c.n - p.n;
+      const dc = d > 0 ? '#d0342c' : (d < 0 ? '#2266cc' : '#888');
+      h += '<tr><td style="text-align:left; font-weight:700;">' + chip(s) + s + '</td><td style="text-align:left; color:#666; font-size:12px;">' + RULE[s] + '</td>' +
+        '<td>' + n(c.n) + '명</td><td>' + c.share + '%</td><td style="color:' + dc + '; font-weight:700;">' + (d > 0 ? '▲' : (d < 0 ? '▼' : '')) + n(Math.abs(d)) + ' (' + (p.n ? ((c.n/p.n - 1) * 100).toFixed(1) : '-') + '%)</td>' +
+        '<td>' + won(c.rev) + '</td><td>' + c.revShare + '%</td><td>' + c.avgF + '회</td><td>' + won(c.avgM) + '</td><td>' + Math.round(c.avgR) + '일</td></tr>';
+    });
+    h += '<tr style="background:#f7f8fa; font-weight:700;"><td style="text-align:left;">합계</td><td></td><td>' + n(C.total) + '명</td><td>100%</td><td>' + (C.total - P.total >= 0 ? '+' : '') + n(C.total - P.total) + '</td><td>' + won(C.rev) + '</td><td>100%</td><td></td><td></td><td></td></tr></tbody>';
+    document.getElementById('rfmTable').innerHTML = h;
+    // 차트
+    if (chart) chart.destroy();
+    chart = new Chart(document.getElementById('rfmShare').getContext('2d'), {
+      type: 'bar',
+      data: { labels: SEG, datasets: [
+        { label: '회원 비중', data: SEG.map(function(s){ return C.segments[s].share; }), backgroundColor: '#9aa6b8' },
+        { label: '매출 비중', data: SEG.map(function(s){ return C.segments[s].revShare; }), backgroundColor: '#1B2A4A' } ] },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + c.parsed.y + '%'; } } } },
+        scales: { y: { ticks: { callback: function(v){ return v + '%'; } } } } }
+    });
+    // R x F 그리드
+    const maxG = Math.max.apply(null, Object.values(R.grid));
+    const fl = { 1:'1회', 2:'2회', 3:'3~4회', 4:'5~9회', 5:'10회+' }, rl = { 5:'≤30일', 4:'31~60일', 3:'61~90일', 2:'91~180일', 1:'181~365일' };
+    let g = '<tr><th style="background:none;"></th>' + [1,2,3,4,5].map(function(f){ return '<th>F ' + fl[f] + '</th>'; }).join('') + '</tr>';
+    [5,4,3,2,1].forEach(function(r){
+      g += '<tr><td class="c-label">R ' + rl[r] + '</td>';
+      [1,2,3,4,5].forEach(function(f){
+        const v = R.grid[String(r) + f] || 0, a = 0.08 + 0.85 * Math.sqrt(v / maxG);
+        g += '<td title="평균 매출 ' + won(R.gridM[String(r) + f]) + '" style="background:rgba(27,42,74,' + a.toFixed(2) + '); color:' + (a > 0.5 ? '#fff' : '#1B2A4A') + ';"><b>' + n(v) + '</b></td>';
+      });
+      g += '</tr>';
+    });
+    document.getElementById('rfmGrid').innerHTML = g;
+    // 이동 매트릭스
+    const cols = SEG.concat(['미이용(12개월 이탈)']);
+    let mt = '<tr><th style="background:none;"></th>' + cols.map(function(c){ return '<th>' + (c === '미이용(12개월 이탈)' ? '1년 미이용' : c) + '</th>'; }).join('') + '<th>3개월 전 인원</th></tr>';
+    SEG.forEach(function(s){
+      const row = R.migration[s], tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0);
+      mt += '<tr><td class="c-label">' + s + '</td>';
+      cols.forEach(function(c){
+        const v = tot ? (row[c] || 0) / tot * 100 : 0, diag = c === s;
+        const bad = (['VIP','충성','잠재 충성'].indexOf(s) >= 0) && (c === '이탈 위험' || c === '휴면' || c === '미이용(12개월 이탈)');
+        const a = Math.min(0.9, v / 60);
+        const bg = diag ? 'rgba(27,42,74,' + (0.15 + a * 0.8).toFixed(2) + ')' : (bad ? 'rgba(208,52,44,' + (0.06 + a * 0.7).toFixed(2) + ')' : 'rgba(92,138,166,' + (0.04 + a * 0.6).toFixed(2) + ')');
+        g = v;
+        mt += '<td title="' + n(row[c] || 0) + '명" style="background:' + bg + '; color:' + ((diag && a > 0.45) ? '#fff' : '#1B2A4A') + ';">' + (v ? v.toFixed(1) + '%' : '-') + '</td>';
+      });
+      mt += '<td style="background:#f7f8fa;">' + n(tot) + '명</td></tr>';
+    });
+    document.getElementById('rfmMig').innerHTML = mt;
+  }
+  document.getElementById('rfmDefBtn').onclick = function(){
+    const pnl = document.getElementById('rfmDefPanel'); const open = pnl.style.display === 'none';
+    pnl.style.display = open ? '' : 'none'; this.textContent = open ? 'ⓘ 기준닫기' : 'ⓘ 기준정의';
+  };
   const prev = window.refreshPage7;
   window.refreshPage7 = function(){ if (typeof prev === 'function') prev(); render(); };
 })();
