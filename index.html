@@ -2353,14 +2353,14 @@
         </div>
         <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
           <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
-            <h2 style="margin:0;">📊 기존 회원 — 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</h2>
-            <button class="navbtn" id="rpGapDefBtn" type="button" aria-expanded="false">ⓘ 기준정의</button>
+            <h2 style="margin:0;" id="rpGapTitle">📊 기존 회원 — 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</h2>
+            <div style="display:flex; gap:8px; align-items:center;"><span id="rpGapStatBar" style="display:inline-flex;"></span><button class="navbtn" id="rpGapDefBtn" type="button" aria-expanded="false">ⓘ 기준정의</button></div>
           </div>
           <div id="rpGapDefPanel" style="display:none; margin-bottom:12px; border:1px solid #d3e2f5; background:#eef4fc; padding:12px 14px; font-size:12px; color:#333; line-height:1.75;">
             <div style="font-weight:700; color:#1B2A4A; margin-bottom:6px;">📘 이용 간격 중앙값 집계 기준</div>
             · <b>대상</b>: 해당 월에 예약을 시작한 <b>모든 예약</b>(신규·기존 회원 구분 없음) 중, 같은 회원의 <b>직전 예약</b>이 관측되는 예약<br>
             · <b>이용 간격</b>: 이번 예약 시작일 − 같은 회원의 직전 예약 시작일 (일 단위, 소수 첫째 자리)<br>
-            · <b>집계</b>: 해당 월 예약들의 이용 간격 <b>중앙값</b> · 간격이 <b>180일 초과</b>인 경우는 휴면 후 복귀로 보고 제외 · 같은 시각대 중복 예약(30분 이내)은 제외<br>
+            · <b>집계</b>: 해당 월 예약들의 이용 간격 <b>평균</b> 또는 <b>중앙값</b>(버튼으로 전환) · 평균은 간격이 긴 소수 예약에 끌려 올라가므로 대표값은 중앙값을 권장 · 간격이 <b>180일 초과</b>인 경우는 휴면 후 복귀로 보고 제외 · 같은 시각대 중복 예약(30분 이내)은 제외<br>
             · <b>표시 기간</b>: 대여내역 관측이 시작되는 2024년 12월 이후 180일이 모두 확보되는 <b>2025년 6월부터</b> 표시(2024년 2~11월 파일 없음 → 2025년 1~5월은 긴 간격이 누락돼 값이 짧게 왜곡되므로 비움)<br>
             · <b>비교</b>: 같은 달끼리(예: 2026년 8월 vs 2025년 8월) · 툴팁의 "7일 내 재이용"은 간격이 7일 이하인 예약 비중<br>
             · <b>데이터</b>: 왕복 카셰어링 대여내역(리턴프리 편도 제외) · 진행 중인 달은 경과 일수까지 부분 집계 · 기준일 2026-09-27(자동 갱신 대상 아님)
@@ -2478,7 +2478,7 @@
     const col = Math.abs(v) < 0.05 ? '#888' : (good ? '#d0342c' : '#2266cc');
     return ' <span style="font-size:12.5px;font-weight:600;color:' + col + ';">(전년 대비 ' + (v > 0 ? '+' : '') + v.toFixed(1) + unit + ')</span>';
   }
-  let rpStat = 'median', rpWin = 'w90', rpYears = null;
+  let rpStat = 'median', rpWin = 'w90', rpYears = null, rpGapStat = 'median';
   function btn(active, label, onClick, first, last){
     const b = document.createElement('button'); b.className = 'tab-btn' + (active ? ' active' : ''); b.type = 'button'; b.textContent = label;
     b.style.cssText = 'padding:5px 12px; font-size:12px;' + (first ? '' : 'margin-left:-1.5px;');
@@ -2557,7 +2557,11 @@
     });
     // 3) 기존 회원 간격: 월(1~12) 기준 연도 겹쳐 보기
     const months = Array.from({length:12}, function(_, i){ return String(i+1).padStart(2,'0'); });
-    const ser = function(y){ return months.map(function(mm){ const g = D.gap[y + '-' + mm]; return g ? g.median : null; }); };
+    const gb = document.getElementById('rpGapStatBar'); gb.innerHTML = '';
+    [['mean','평균'],['median','중앙값']].forEach(function(o, i){ gb.appendChild(btn(rpGapStat === o[0], o[1], function(){ rpGapStat = o[0]; render(); }, i === 0)); });
+    const statLabel = rpGapStat === 'mean' ? '평균' : '중앙값';
+    document.getElementById('rpGapTitle').textContent = '📊 기존 회원 — 이용 간격 ' + statLabel + ' (직전 이용 → 이번 이용, 일)';
+    const ser = function(y){ return months.map(function(mm){ const g = D.gap[y + '-' + mm]; return g ? g[rpGapStat] : null; }); };
     charts.g = new Chart(document.getElementById('rpGap').getContext('2d'), {
       type: 'line',
       data: { labels: months.map(function(m){ return (+m) + '월'; }), datasets: [
@@ -2566,9 +2570,9 @@
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { tooltip: { callbacks: { label: function(c){
           const y = c.dataset.label.slice(0,4), g = D.gap[y + '-' + months[c.dataIndex]];
-          return c.dataset.label + ': 중앙값 ' + c.parsed.y + '일' + (g ? ' · 7일 내 재이용 ' + g.within7 + '% · ' + g.n.toLocaleString('ko-KR') + '건' : '');
+          return c.dataset.label + ': ' + statLabel + ' ' + c.parsed.y + '일' + (g ? ' (평균 ' + g.mean + '일 / 중앙값 ' + g.median + '일) · 7일 내 재이용 ' + g.within7 + '% · ' + g.n.toLocaleString('ko-KR') + '건' : '');
         } } } },
-        scales: { y: { ticks: { callback: function(v){ return v + '일'; } } } } }
+        scales: { y: { beginAtZero: rpGapStat === 'mean', ticks: { callback: function(v){ return v + '일'; } } } } }
     });
     document.getElementById('rpFoot').innerHTML =
       '· 신규: 첫이용 마스터 기준 첫 이용 시각 이후 대여내역(왕복)에서 처음 나온 예약까지의 일수. n일 내 재이용률은 코호트 전원이 n일 이상 관측된 경우만 표시(최근 코호트는 비어 있음). 중앙값은 90일 내 재이용한 회원 기준입니다.<br>' +
