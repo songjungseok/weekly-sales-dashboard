@@ -2387,10 +2387,6 @@
           </div>
           <div class="chart-box" style="height:300px;"><canvas id="rfmTrend"></canvas></div>
         </div>
-        <div class="charts-row" style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
-          <div><h2 style="margin:0 0 12px;">📊 세그먼트별 회원 비중 vs 매출 비중 <span id="rfmShareLbl" style="font-size:12px; font-weight:400; color:#888;"></span></h2><div class="chart-box" style="height:300px;"><canvas id="rfmShare"></canvas></div></div>
-          <div><h2 style="margin:0 0 12px;">📊 최근성(R) × 이용빈도(F) 분포 <span style="font-size:12px; font-weight:400; color:#888;">(칸 = 회원수, 마우스를 올리면 평균 매출)</span></h2><div style="overflow-x:auto;"><table id="rfmGrid" class="cohort-table" style="min-width:0;"></table></div></div>
-        </div>
         <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
           <h2 style="margin:0 0 6px;">📊 세그먼트 이동 (전월 → 선택 월)</h2>
           <div style="font-size:12px; color:#777; margin-bottom:10px;">행 = 전월 세그먼트(＋신규 유입), 열 = 선택 월 세그먼트, 값 = 행 기준 비중(%). 마우스를 올리면 인원수를 볼 수 있습니다.</div>
@@ -2595,7 +2591,7 @@
 </script>
 <script>
 (function(){
-  let R = null, cShare = null, cTrend = null, sel = null, trendMode = 'n';
+  let R = null, cTrend = null, sel = null, trendMode = 'n';
   try { R = JSON.parse(document.getElementById('rfm-data').textContent); } catch(e) { R = null; }
   const SEG = ['VIP','충성','잠재 충성','신규·1회','관심 필요','이탈 위험','휴면'];
   const OUT = '미이용(12개월 이탈)', NEW = '신규 유입';
@@ -2687,29 +2683,6 @@
         plugins: { tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + (trendMode === 'n' ? n(c.parsed.y) + '명' : c.parsed.y + '%'); } } } },
         scales: { y: { ticks: { callback: function(v){ return trendMode === 'n' ? n(v) : v + '%'; } } } } }
     });
-    document.getElementById('rfmShareLbl').textContent = '(' + mlabel(sel) + ')';
-    if (cShare) cShare.destroy();
-    cShare = new Chart(document.getElementById('rfmShare').getContext('2d'), {
-      type: 'bar',
-      data: { labels: SEG, datasets: [
-        { label: '회원 비중', data: SEG.map(function(s){ return C.segments[s].share; }), backgroundColor: '#9aa6b8' },
-        { label: '매출 비중', data: SEG.map(function(s){ return C.segments[s].revShare; }), backgroundColor: '#1B2A4A' } ] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + c.parsed.y + '%'; } } } },
-        scales: { y: { ticks: { callback: function(v){ return v + '%'; } } } } }
-    });
-    const maxG = Math.max.apply(null, Object.values(C.grid));
-    const fl = { 1:'1회', 2:'2회', 3:'3~4회', 4:'5~9회', 5:'10회+' }, rl = { 5:'≤30일', 4:'31~60일', 3:'61~90일', 2:'91~180일', 1:'181~365일' };
-    let g = '<tr><th style="background:none;"></th>' + [1,2,3,4,5].map(function(f){ return '<th>F ' + fl[f] + '</th>'; }).join('') + '</tr>';
-    [5,4,3,2,1].forEach(function(r){
-      g += '<tr><td class="c-label">R ' + rl[r] + '</td>';
-      [1,2,3,4,5].forEach(function(f){
-        const v = C.grid[String(r) + f] || 0, a = 0.08 + 0.85 * Math.sqrt(v / maxG);
-        g += '<td title="평균 매출 ' + won(C.gridM[String(r) + f]) + '" style="background:rgba(27,42,74,' + a.toFixed(2) + '); color:' + (a > 0.5 ? '#fff' : '#1B2A4A') + ';"><b>' + n(v) + '</b></td>';
-      });
-      g += '</tr>';
-    });
-    document.getElementById('rfmGrid').innerHTML = g;
     const mig = C.migration, tbl = document.getElementById('rfmMig');
     if (!mig) { tbl.innerHTML = '<tr><td>전월 스냅샷이 없어 이동을 계산할 수 없습니다.</td></tr>'; return; }
     const cols = SEG.concat([OUT]);
