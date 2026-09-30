@@ -2388,9 +2388,8 @@
           <div class="chart-box" style="height:300px;"><canvas id="rfmTrend"></canvas></div>
         </div>
         <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
-          <h2 style="margin:0 0 6px;">📊 세그먼트 이동 (전월 → 이번 달)</h2>
-          <div style="font-size:12px; color:#777; margin-bottom:10px;">왼쪽(세로) = <b>전월</b> 세그먼트, 위쪽(가로) = <b>이번 달</b> 세그먼트 · 값은 전월 인원 대비 비중(%)으로, 한 줄을 가로로 더하면 100%입니다. 예: 충성 줄의 VIP 칸 = 전월 충성 회원 중 이번 달 VIP로 올라간 비율 · 마우스를 올리면 인원수를 볼 수 있습니다.</div>
-          <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px;"></table></div>
+          <h2 style="margin:0 0 12px;">📊 세그먼트 이동 (전월 → 이번 달)</h2>
+                    <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px;"></table></div>
         </div>
       </div>
     </div>
@@ -2687,9 +2686,9 @@
     if (!mig) { tbl.innerHTML = '<tr><td>전월 스냅샷이 없어 이동을 계산할 수 없습니다.</td></tr>'; return; }
     const cols = SEG.concat([OUT]);
     const curLbl = (+sel.slice(5)) + '월', prvLbl = (+ks[idx-1].slice(5)) + '월';
-    let mt = '<tr><th rowspan="2" style="background:#eef4fc; color:#1B2A4A; font-size:11.5px; line-height:1.5; border:1px solid #d3e2f5;">전월(' + prvLbl + ') ↓<br>이번 달(' + curLbl + ') →</th>' +
-      '<th colspan="' + cols.length + '" style="background:#3f5f86;">이번 달(' + curLbl + ') 세그먼트 →</th><th rowspan="2">전월 인원</th></tr>' +
-      '<tr>' + cols.map(function(c){ return '<th>' + (c === OUT ? '1년 미이용' : c) + '</th>'; }).join('') + '</tr>';
+    let mt = '<tr><th rowspan="2" style="background:none;"></th>' +
+      '<th colspan="' + cols.length + '" style="background:#3f5f86;">이번 달(' + curLbl + ') 세그먼트 →</th><th rowspan="2" style="background:#1a2b3c;">전월 인원</th></tr>' +
+      '<tr>' + cols.map(function(c){ return '<th style="background:#1a2b3c; color:#fff;">' + (c === OUT ? '1년 미이용' : c) + '</th>'; }).join('') + '</tr>';
     SEG.concat([NEW]).forEach(function(s){
       const row = mig[s] || {}, tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0);
       mt += '<tr><td class="c-label">' + s + ' <span style="font-weight:400; color:#999; font-size:10.5px;">(' + prvLbl + ')</span></td>';
