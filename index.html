@@ -2351,7 +2351,20 @@
           </div>
           <div><h2 style="margin:0 0 12px;">📊 코호트별 30일 / 90일 내 재이용률</h2><div class="chart-box"><canvas id="rpCohort"></canvas></div></div>
         </div>
-        <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;"><h2>📊 기존 회원 — 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</h2><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
+        <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px;">
+            <h2 style="margin:0;">📊 기존 회원 — 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</h2>
+            <button class="navbtn" id="rpGapDefBtn" type="button" aria-expanded="false">ⓘ 기준정의</button>
+          </div>
+          <div id="rpGapDefPanel" style="display:none; margin-bottom:12px; border:1px solid #d3e2f5; background:#eef4fc; padding:12px 14px; font-size:12px; color:#333; line-height:1.75;">
+            <div style="font-weight:700; color:#1B2A4A; margin-bottom:6px;">📘 이용 간격 중앙값 집계 기준</div>
+            · <b>대상</b>: 해당 월에 예약을 시작한 <b>모든 예약</b>(신규·기존 회원 구분 없음) 중, 같은 회원의 <b>직전 예약</b>이 관측되는 예약<br>
+            · <b>이용 간격</b>: 이번 예약 시작일 − 같은 회원의 직전 예약 시작일 (일 단위, 소수 첫째 자리)<br>
+            · <b>집계</b>: 해당 월 예약들의 이용 간격 <b>중앙값</b> · 간격이 <b>180일 초과</b>인 경우는 휴면 후 복귀로 보고 제외 · 같은 시각대 중복 예약(30분 이내)은 제외<br>
+            · <b>표시 기간</b>: 대여내역 관측이 시작되는 2024년 12월 이후 180일이 모두 확보되는 <b>2025년 6월부터</b> 표시(2024년 2~11월 파일 없음 → 2025년 1~5월은 긴 간격이 누락돼 값이 짧게 왜곡되므로 비움)<br>
+            · <b>비교</b>: 같은 달끼리(예: 2026년 8월 vs 2025년 8월) · 툴팁의 "7일 내 재이용"은 간격이 7일 이하인 예약 비중<br>
+            · <b>데이터</b>: 왕복 카셰어링 대여내역(리턴프리 편도 제외) · 진행 중인 달은 경과 일수까지 부분 집계 · 기준일 2026-09-27(자동 갱신 대상 아님)
+          </div><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
         <div id="rpFoot" style="font-size:11.5px; color:#999; margin-top:10px; line-height:1.6;"></div>
       </div>
     </div>
@@ -2562,6 +2575,14 @@
       '· 기존: 해당 월 모든 예약에 대해 같은 회원의 직전 예약과의 간격(180일 이하)을 집계. 관측 시작(2024-12) 이후 180일이 지난 2025년 6월부터 표시합니다.<br>' +
       '· 데이터 기준일 ' + D.observedThrough + ' · 리턴프리 편도 제외';
   }
+  (function(){
+    const b = document.getElementById('rpGapDefBtn'); if (!b) return;
+    b.onclick = function(){
+      const pnl = document.getElementById('rpGapDefPanel'); const open = pnl.style.display === 'none';
+      pnl.style.display = open ? '' : 'none'; b.setAttribute('aria-expanded', open ? 'true' : 'false');
+      b.textContent = open ? 'ⓘ 기준닫기' : 'ⓘ 기준정의';
+    };
+  })();
   const prev = window.refreshPage7;
   window.refreshPage7 = function(){ if (typeof prev === 'function') prev(); render(); };
 })();
