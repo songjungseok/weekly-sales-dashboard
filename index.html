@@ -383,11 +383,9 @@
 
     <div id="page1" class="page-content" style="position:relative;">
 
-<div style="position:absolute; top:0; right:0; color:#e02424; font-weight:700; font-size:13px;">해당페이지는 예시입니다. 기획 예정</div>
 
 <div class="page-eyebrow">FUNNEL OVERVIEW</div>
 <h1>🔻 퍼널별 현황</h1>
-<div class="sub" id="funnelSubhead" style="margin-bottom:12px;">데이터 로딩 중...</div>
 
 <div class="toolbar" id="funnelToolbar" style="display:inline-flex; justify-content:flex-start; margin-bottom:18px;">
   <span style="display:inline-flex; margin-right:6px;">
@@ -591,8 +589,6 @@
       document.getElementById('funnelNextBtn').disabled = idx <= 0;
       document.getElementById('funnelLatestBtn').disabled = idx <= 0;
       const baseLabel = isM ? (base.key + (base.partial ? ', ' + base.days + '일 경과' : '')) : weekLabel(base);
-      document.getElementById('funnelSubhead').textContent =
-        (isLatest ? (isM ? '최신 월' : '최신 주차') : (isM ? '선택 월' : '선택 주차')) + '(' + baseLabel + ') 기준 방문 → 스팟조회 → 차량조회 → 예약행동 / 이용 퍼널 현황입니다.';
 
       // KPI 카드 (+ 주간: 전주 대비 / 월간: 전월 대비 증감)
       const convRate = pct(base.이용자수_일별합, base.방문자수);
