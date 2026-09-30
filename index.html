@@ -2325,44 +2325,45 @@
       <div class="page-eyebrow">MEMBER ANALYSIS</div>
       <h1>👥 회원분석</h1>
       <div class="section">
-        <h2>🔁 코호트별 재이용률</h2>
+        <h2>📊 코호트별 재이용률</h2>
         <div style="font-size:12px; color:#777; margin:-4px 0 12px; line-height:1.6;">※ 첫이용 마스터 파일 기준 <b>실제 최초 이용월</b>로 코호트를 구성하고, 이후 각 달에 1회 이상 이용(대여내역 예약 시작일 기준)한 회원 비율을 표시합니다. 대여내역 파일이 있는 2024년 12월 이후 코호트만 포함합니다(2024년 2~11월 파일 없음).</div>
-        <div id="cohortYearBar" style="display:flex; gap:8px; margin-bottom:12px;"></div>
-        <div id="cohortSummary" style="font-size:12.5px; color:#444; background:#f4f6fa; border:1px solid #e3e7ee; padding:9px 12px; margin-bottom:12px;"></div>
+        <div class="tab-bar-wrap"><div id="cohortYearBar" class="tab-bar"></div></div>
+        <div id="cohortSummary" style="font-size:12.5px; color:#333; background:#eef4fc; border:1px solid #d3e2f5; padding:9px 12px; margin-bottom:14px;"></div>
         <div style="overflow-x:auto;"><table id="cohortTable" class="cohort-table"></table></div>
         <div id="cohortFoot" style="font-size:11.5px; color:#999; margin-top:10px; line-height:1.6;"></div>
       </div>
       <div class="section">
-        <h2>⏱ 재구매 주기</h2>
+        <h2>📊 재구매 주기</h2>
         <div style="font-size:12px; color:#777; margin:-4px 0 12px; line-height:1.6;">※ <b>신규 회원</b>이 첫 이용 후 두 번째로 이용하기까지 걸린 기간과, <b>기존 회원</b>의 이용과 이용 사이 간격을 봅니다. 신규 비교는 두 해 모두 관측 기간이 충분한 1~6월 코호트끼리, 기존 회원 간격은 같은 달끼리 비교합니다.</div>
         <div class="kpi-grid" id="rpKpi" style="grid-template-columns:repeat(4,1fr);"></div>
         <div class="charts-row" style="margin-top:14px;">
           <div>
             <div style="display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; margin-bottom:6px;">
-              <div style="font-size:13px; font-weight:700; color:#1B2A4A;">신규 회원: 두 번째 이용까지 걸린 기간 (첫 이용월별)</div>
+              <h2 style="margin:0;">📊 신규 회원 — 두 번째 이용까지 걸린 기간 (첫 이용월별)</h2>
               <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
                 <span id="rpStatBar" style="display:inline-flex;"></span>
                 <span id="rpWinBar" style="display:inline-flex;"></span>
               </div>
             </div>
-            <div id="rpYearBar" style="font-size:12px; color:#555; margin-bottom:6px; display:flex; gap:10px; align-items:center;"></div>
+            <div id="rpYearBar" style="font-size:13px; color:#333; margin:8px 0; display:flex; gap:14px; align-items:center;"></div>
             <div class="chart-box"><canvas id="rpHist"></canvas></div>
             <div id="rpHistNote" style="font-size:11px; color:#999; margin-top:4px;"></div>
           </div>
-          <div><div style="font-size:13px; font-weight:700; color:#1B2A4A; margin-bottom:6px;">코호트별 30일 / 90일 내 재이용률</div><div class="chart-box"><canvas id="rpCohort"></canvas></div></div>
+          <div><h2 style="margin:0 0 12px;">📊 코호트별 30일 / 90일 내 재이용률</h2><div class="chart-box"><canvas id="rpCohort"></canvas></div></div>
         </div>
-        <div style="margin-top:16px;"><div style="font-size:13px; font-weight:700; color:#1B2A4A; margin-bottom:6px;">기존 회원: 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</div><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
+        <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;"><h2>📊 기존 회원 — 이용 간격 중앙값 (직전 이용 → 이번 이용, 일)</h2><div class="chart-box"><canvas id="rpGap"></canvas></div></div>
         <div id="rpFoot" style="font-size:11.5px; color:#999; margin-top:10px; line-height:1.6;"></div>
       </div>
     </div>
 <style>
   .cohort-table { border-collapse: separate; border-spacing: 3px; font-size: 11.5px; min-width: 900px; width: 100%; }
-  .cohort-table th { font-weight: 600; color: #666; padding: 6px 4px; text-align: center; white-space: nowrap; }
-  .cohort-table td { text-align: center; padding: 7px 4px; border-radius: 4px; white-space: nowrap; }
+  .cohort-table th { font-weight: 700; color: #fff; background: #1a2b3c; padding: 8px 4px; text-align: center; white-space: nowrap; }
+  .cohort-table th:first-child { background: none; }
+  .cohort-table td { text-align: center; padding: 8px 4px; border-radius: 0; white-space: nowrap; }
   .cohort-table td.c-label { text-align: right; padding-right: 8px; background: none; font-weight: 700; color: #333; }
   .cohort-table td.c-label small { display: block; font-weight: 400; color: #999; font-size: 10.5px; }
-  .cohort-table td.c-empty { background: #f4f4f2; }
-  .cohort-table td.c-partial { outline: 1px dashed #999; outline-offset: -2px; }
+  .cohort-table td.c-empty { background: #f7f8fa; }
+  .cohort-table td.c-partial { outline: 1.5px dashed #8a94a3; outline-offset: -3px; }
   .cohort-table .c-d { font-size: 10px; margin-left: 2px; }
 </style>
 <script>
@@ -2378,10 +2379,10 @@
     return key === DATA.observedThrough.slice(0,7) && DATA.observedThrough.slice(8) !== String(new Date(y + Math.floor(m/12), m % 12 + 1, 0).getDate());
   }
   function cellColor(r, i){
-    if (i === 0) return { bg: '#1f4aa0', fg: '#fff' };
+    if (i === 0) return { bg: '#1B2A4A', fg: '#fff' };
     const t = Math.max(0, Math.min(1, r / 40));           // 0~40% 구간을 색 농도로
-    const a = 0.18 + t * 0.62;
-    return { bg: 'rgba(63,105,190,' + a.toFixed(2) + ')', fg: a > 0.55 ? '#fff' : '#1B2A4A' };
+    const a = 0.12 + t * 0.78;
+    return { bg: 'rgba(92,138,166,' + a.toFixed(2) + ')', fg: a > 0.6 ? '#fff' : '#1B2A4A' };
   }
   function avgAt(year, i){
     const vals = Object.keys(DATA.cohorts).filter(function(k){ return k.slice(0,4) === String(year) && !isPartial(k, i); })
@@ -2396,7 +2397,7 @@
     if (selYear == null) selYear = years[years.length - 1] || 'all';
     document.getElementById('cohortYearBar').innerHTML = ['all'].concat(years).map(function(y){
       const on = y === selYear;
-      return '<button class="navbtn" data-y="' + y + '" style="' + (on ? 'background:#1B2A4A;color:#fff;border-color:#1B2A4A;' : '') + '">' + (y === 'all' ? '전체' : y + '년') + '</button>';
+      return '<button class="tab-btn' + (on ? ' active' : '') + '" data-y="' + y + '">' + (y === 'all' ? '전체' : y + '년') + '</button>';
     }).join('');
     document.querySelectorAll('#cohortYearBar button').forEach(function(b){ b.onclick = function(){ selYear = b.dataset.y; render(); }; });
     const rows = keys.filter(function(k){ return selYear === 'all' || k.slice(0,4) === selYear; });
@@ -2413,7 +2414,7 @@
         let d = '';
         if (py != null && !isPartial(k, i)) {
           const v = r - py;
-          d = '<span class="c-d" style="color:' + (i === 0 ? 'rgba(255,255,255,.75)' : (v > 0 ? '#c0392b' : (v < 0 ? '#1d4ed8' : '#888'))) + ';">(' + (v > 0 ? '▲' : (v < 0 ? '▼' : '')) + Math.abs(v).toFixed(1) + '%p)</span>';
+          d = '<span class="c-d" style="color:' + (i === 0 ? 'rgba(255,255,255,.75)' : (v > 0 ? '#d0342c' : (v < 0 ? '#2266cc' : '#888'))) + ';">(' + (v > 0 ? '▲' : (v < 0 ? '▼' : '')) + Math.abs(v).toFixed(1) + '%p)</span>';
         }
         const tip = k + ' 코호트 ' + i + '개월차: ' + r + '% (' + (c.counts[i] || 0).toLocaleString('ko-KR') + '명)' + (py != null ? ' · 전년 동월 코호트 ' + py + '%' : '') + (isPartial(k, i) ? ' · 진행 중인 달(부분 집계)' : '');
         h += '<td class="' + (isPartial(k, i) ? 'c-partial' : '') + '" title="' + tip + '" style="background:' + col.bg + ';color:' + col.fg + ';"><b>' + (i === 0 ? '100%' : r + '%') + '</b>' + d + '</td>';
@@ -2466,8 +2467,8 @@
   }
   let rpStat = 'median', rpWin = 'w90', rpYears = null;
   function btn(active, label, onClick, first, last){
-    const b = document.createElement('button'); b.className = 'navbtn'; b.type = 'button'; b.textContent = label;
-    b.style.cssText = 'padding:4px 10px; font-size:12px;' + (first ? '' : 'border-left:none;') + (active ? 'background:#1B2A4A;color:#fff;border-color:#1B2A4A;' : '');
+    const b = document.createElement('button'); b.className = 'tab-btn' + (active ? ' active' : ''); b.type = 'button'; b.textContent = label;
+    b.style.cssText = 'padding:5px 12px; font-size:12px;' + (first ? '' : 'margin-left:-1.5px;');
     b.onclick = onClick; return b;
   }
   function renderSecondUse(){
@@ -2479,21 +2480,21 @@
     const wb = document.getElementById('rpWinBar'); wb.innerHTML = '';
     [['w90','90일 내 재이용자 기준'],['all','전체 재이용자 기준']].forEach(function(o, i, arr){ wb.appendChild(btn(rpWin === o[0], o[1], function(){ rpWin = o[0]; renderSecondUse(); }, i === 0, i === arr.length-1)); });
     const yb = document.getElementById('rpYearBar');
-    yb.innerHTML = '<span style="font-weight:600;">연도 선택</span>' + years.map(function(y){
-      return '<label style="display:inline-flex;align-items:center;gap:4px;cursor:pointer;"><input type="checkbox" data-y="' + y + '"' + (rpYears.indexOf(y) >= 0 ? ' checked' : '') + '>' + y + '년</label>';
+    yb.innerHTML = '<span style="font-weight:600; color:#444;">연도 선택</span>' + years.map(function(y){
+      return '<label class="year-cb-label"><input type="checkbox" data-y="' + y + '"' + (rpYears.indexOf(y) >= 0 ? ' checked' : '') + '>' + y + '년</label>';
     }).join('');
     yb.querySelectorAll('input').forEach(function(cb){ cb.onchange = function(){
       rpYears = Array.from(yb.querySelectorAll('input:checked')).map(function(x){ return x.dataset.y; }); renderSecondUse();
     }; });
     const months = Array.from({length:12}, function(_, i){ return String(i+1).padStart(2,'0'); });
     const sel = years.filter(function(y){ return rpYears.indexOf(y) >= 0; });
-    const COLORS = ['#c9a227', '#9aa6b8', '#3f69be', '#1B2A4A'];
+    const YC = { 2024: '#e9a23b', 2025: '#5C8AA6', 2026: '#1B2A4A', 2027: '#2a9d8f' };
     const ds = sel.map(function(y, idx){
       const last = idx === sel.length - 1;
       return {
         label: y + '년',
         data: months.map(function(mm){ const e = SU[y + '-' + mm]; const s2 = e && e[rpWin]; return s2 ? s2[rpStat] : null; }),
-        borderColor: COLORS[(COLORS.length - sel.length + idx) % COLORS.length], backgroundColor: COLORS[(COLORS.length - sel.length + idx) % COLORS.length],
+        borderColor: YC[y] || '#8e5ea2', backgroundColor: YC[y] || '#8e5ea2',
         borderDash: last ? [] : [6,4], tension: 0.25, spanGaps: false, pointRadius: 3
       };
     });
@@ -2535,8 +2536,8 @@
     charts.c = new Chart(document.getElementById('rpCohort').getContext('2d'), {
       type: 'line',
       data: { labels: ck.map(function(k){ return k.slice(2).replace('-','.'); }), datasets: [
-        { label: '30일 내', data: ck.map(function(k){ return D.cohorts[k].w30; }), borderColor: '#3f69be', backgroundColor: '#3f69be', tension: 0.25, spanGaps: false },
-        { label: '90일 내', data: ck.map(function(k){ return D.cohorts[k].w90; }), borderColor: '#2dd4bf', backgroundColor: '#2dd4bf', tension: 0.25, spanGaps: false } ] },
+        { label: '30일 내', data: ck.map(function(k){ return D.cohorts[k].w30; }), borderColor: '#1B2A4A', backgroundColor: '#1B2A4A', tension: 0.25, spanGaps: false },
+        { label: '90일 내', data: ck.map(function(k){ return D.cohorts[k].w90; }), borderColor: '#5C8AA6', backgroundColor: '#5C8AA6', tension: 0.25, spanGaps: false } ] },
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { tooltip: { callbacks: { label: function(c){ return c.dataset.label + ' 재이용률: ' + c.parsed.y + '%'; } } } },
         scales: { y: { ticks: { callback: function(v){ return v + '%'; } } }, x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
@@ -2547,7 +2548,7 @@
     charts.g = new Chart(document.getElementById('rpGap').getContext('2d'), {
       type: 'line',
       data: { labels: months.map(function(m){ return (+m) + '월'; }), datasets: [
-        { label: '2025년', data: ser('2025'), borderColor: '#9aa6b8', backgroundColor: '#9aa6b8', borderDash: [6,4], tension: 0.25 },
+        { label: '2025년', data: ser('2025'), borderColor: '#5C8AA6', backgroundColor: '#5C8AA6', borderDash: [6,4], tension: 0.25 },
         { label: '2026년', data: ser('2026'), borderColor: '#1B2A4A', backgroundColor: '#1B2A4A', tension: 0.25 } ] },
       options: { responsive: true, maintainAspectRatio: false,
         plugins: { tooltip: { callbacks: { label: function(c){
