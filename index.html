@@ -2388,8 +2388,8 @@
           <div class="chart-box" style="height:300px;"><canvas id="rfmTrend"></canvas></div>
         </div>
         <div style="margin-top:20px; padding-top:18px; border-top:1px solid #eceef0;">
-          <h2 style="margin:0 0 6px;">📊 세그먼트 이동 (전월 → 선택 월)</h2>
-          <div style="font-size:12px; color:#777; margin-bottom:10px;">행 = 전월 세그먼트(＋신규 유입), 열 = 선택 월 세그먼트, 값 = 행 기준 비중(%). 마우스를 올리면 인원수를 볼 수 있습니다.</div>
+          <h2 style="margin:0 0 6px;">📊 세그먼트 이동 (전월 → 이번 달)</h2>
+          <div style="font-size:12px; color:#777; margin-bottom:10px;">왼쪽(세로) = <b>전월</b> 세그먼트, 위쪽(가로) = <b>이번 달</b> 세그먼트 · 값은 전월 인원 대비 비중(%)으로, 한 줄을 가로로 더하면 100%입니다. 예: 충성 줄의 VIP 칸 = 전월 충성 회원 중 이번 달 VIP로 올라간 비율 · 마우스를 올리면 인원수를 볼 수 있습니다.</div>
           <div style="overflow-x:auto;"><table id="rfmMig" class="cohort-table" style="min-width:900px;"></table></div>
         </div>
       </div>
@@ -2686,16 +2686,19 @@
     const mig = C.migration, tbl = document.getElementById('rfmMig');
     if (!mig) { tbl.innerHTML = '<tr><td>전월 스냅샷이 없어 이동을 계산할 수 없습니다.</td></tr>'; return; }
     const cols = SEG.concat([OUT]);
-    let mt = '<tr><th style="background:none;"></th>' + cols.map(function(c){ return '<th>' + (c === OUT ? '1년 미이용' : c) + '</th>'; }).join('') + '<th>전월 인원</th></tr>';
+    const curLbl = (+sel.slice(5)) + '월', prvLbl = (+ks[idx-1].slice(5)) + '월';
+    let mt = '<tr><th rowspan="2" style="background:#eef4fc; color:#1B2A4A; font-size:11.5px; line-height:1.5; border:1px solid #d3e2f5;">전월(' + prvLbl + ') ↓<br>이번 달(' + curLbl + ') →</th>' +
+      '<th colspan="' + cols.length + '" style="background:#3f5f86;">이번 달(' + curLbl + ') 세그먼트 →</th><th rowspan="2">전월 인원</th></tr>' +
+      '<tr>' + cols.map(function(c){ return '<th>' + (c === OUT ? '1년 미이용' : c) + '</th>'; }).join('') + '</tr>';
     SEG.concat([NEW]).forEach(function(s){
       const row = mig[s] || {}, tot = cols.reduce(function(a, c){ return a + (row[c] || 0); }, 0);
-      mt += '<tr><td class="c-label">' + s + '</td>';
+      mt += '<tr><td class="c-label">' + s + ' <span style="font-weight:400; color:#999; font-size:10.5px;">(' + prvLbl + ')</span></td>';
       cols.forEach(function(c){
         const v = tot ? (row[c] || 0) / tot * 100 : 0, diag = c === s;
         const bad = (['VIP','충성','잠재 충성'].indexOf(s) >= 0) && (['이탈 위험','휴면',OUT].indexOf(c) >= 0);
         const a = Math.min(0.9, v / 60);
         const bg = diag ? 'rgba(27,42,74,' + (0.15 + a * 0.8).toFixed(2) + ')' : (bad ? 'rgba(208,52,44,' + (0.06 + a * 0.7).toFixed(2) + ')' : 'rgba(92,138,166,' + (0.04 + a * 0.6).toFixed(2) + ')');
-        mt += '<td title="' + n(row[c] || 0) + '명" style="background:' + bg + '; color:' + ((diag && a > 0.45) ? '#fff' : '#1B2A4A') + ';">' + (v ? v.toFixed(1) + '%' : '-') + '</td>';
+        mt += '<td title="전월 ' + s + ' → 이번 달 ' + (c === OUT ? '1년 미이용' : c) + ': ' + n(row[c] || 0) + '명" style="background:' + bg + '; color:' + ((diag && a > 0.45) ? '#fff' : '#1B2A4A') + ';">' + (v ? v.toFixed(1) + '%' : '-') + '</td>';
       });
       mt += '<td style="background:#f7f8fa;">' + n(tot) + '명</td></tr>';
     });
