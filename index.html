@@ -2398,14 +2398,26 @@
     tbl.innerHTML = h;
     // 요약: 선택 연도(전체면 최신 연도) vs 전년 코호트 평균 재이용률
     const yA = selYear === 'all' ? years[years.length - 1] : selYear, yB = String(+yA - 1);
+    // 같은 달 코호트끼리만 비교(예: 26-01 vs 25-01) — 연도 전체 평균은 계절 구성 차이로 왜곡될 수 있음
+    function matchedAvg(i){
+      const pa = [], pb = [];
+      Object.keys(DATA.cohorts).forEach(function(k){
+        if (k.slice(0,4) !== String(yA) || isPartial(k, i)) return;
+        const a = rateAt(k, i), b = rateAt(prevYearKey(k), i);
+        if (a != null && b != null) { pa.push(a); pb.push(b); }
+      });
+      if (!pa.length) return null;
+      const m = function(v){ return v.reduce(function(x,y){ return x+y; }, 0) / v.length; };
+      return { a: m(pa), b: m(pb), n: pa.length };
+    }
     const parts = [1, 3, 6].map(function(i){
-      const a = avgAt(yA, i), b = avgAt(yB, i);
-      if (a == null || b == null) return null;
+      const mm = matchedAvg(i); if (!mm) return null;
+      const a = mm.a, b = mm.b;
       const v = a - b;
       return '<b>' + i + '개월차</b> ' + b.toFixed(1) + '%→' + a.toFixed(1) + '% (' + (v >= 0 ? '+' : '') + v.toFixed(1) + '%p, ' + (v >= 0 ? '개선' : '악화') + ')';
     }).filter(Boolean);
     document.getElementById('cohortSummary').innerHTML = parts.length
-      ? '※ ' + yB + '년 대비 ' + yA + '년 코호트 평균 재이용률: ' + parts.join(' · ')
+      ? '※ ' + yB + '년 대비 ' + yA + '년 코호트 평균 재이용률(같은 달 코호트끼리 비교): ' + parts.join(' · ')
       : '※ ' + yA + '년 코호트와 비교할 ' + yB + '년 코호트 데이터가 부족합니다.';
     document.getElementById('cohortFoot').innerHTML =
       '· 괄호 안 ▲▼는 <b>전년 같은 달 코호트의 같은 개월차</b> 대비 %p 차이입니다(빨강 = 개선, 파랑 = 악화). 0개월차는 정의상 100%입니다.<br>' +
