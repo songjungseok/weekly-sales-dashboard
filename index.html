@@ -2716,11 +2716,7 @@
       '· 진한 남색 대각선 칸 = 같은 세그먼트에 그대로 머문 비율 · 연한 빨강 칸 = 상위 세그먼트(VIP·충성·잠재 충성)에서 이탈 쪽(이탈 위험·휴면·1년 미이용)으로 간 칸 · 칸에 마우스를 올리면 인원수가 나옵니다.<br>' +
       '<div style="font-weight:700; color:#1B2A4A; margin:8px 0 4px;">🔎 예시 (' + prvLbl + ' → ' + curLbl + ')</div>' +
       '· ' + ex('VIP', 'VIP', '로 유지') + '<br>' +
-      '· ' + ex('VIP', '충성', '으로 전환') + '<br>' +
-      '· ' + ex('충성', 'VIP', '로 상승') + '<br>' +
-      '· ' + ex('충성', '관심 필요', '로 하락') + '<br>' +
-      '· <b>' + curLbl + '에 새로 들어온 회원(신규 유입)</b> 중 <b>' + pct('신규 유입', '신규·1회').p.toFixed(1) + '%</b>(' + n(pct('신규 유입', '신규·1회').v) + '명)는 <b>신규·1회</b>로 시작 — ' + prvLbl + ' 스냅샷엔 없던 회원입니다.<br>' +
-      '· ' + ex('휴면', OUT, '') + ' — 최근 365일 이용이 없어 스냅샷에서 사라진 회원입니다.';
+      '· ' + ex('VIP', '충성', '으로 전환');
   }
   document.getElementById('rfmDefBtn').onclick = function(){
     const pnl = document.getElementById('rfmDefPanel'); const open = pnl.style.display === 'none';
