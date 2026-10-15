@@ -4314,8 +4314,11 @@
     renderChips();
     if (!couponNameFilterWired){
       couponNameFilterWired = true;
+      // 항목 클릭 후 목록이 다시 그려져 클릭 대상이 DOM에서 빠져도 닫히지 않도록 composedPath로 판정
       document.addEventListener('click', (e) => {
-        if (!e.target.closest('#couponNameSearchInput') && !e.target.closest('#couponNameSearchList')) list.classList.remove('open');
+        const path = e.composedPath ? e.composedPath() : [];
+        if (path.includes(list) || path.includes(input)) return;
+        list.classList.remove('open');
       });
     }
   }
