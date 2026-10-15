@@ -182,7 +182,16 @@
   .veh-search-input { width: 120px; padding: 5px 10px; font-size: 12.5px; font-weight: 500; }
   .veh-search-list { width: 200px; }
   .coupon-name-search-input { width: 220px; padding: 6px 12px; font-size: 13px; font-weight: 500; }
-  .coupon-name-search-list { width: 340px; }
+  .coupon-name-search-list { width: 360px; max-height: 320px; }
+  .coupon-name-search-list .partner-search-item { display: flex; align-items: center; gap: 8px; }
+  .coupon-name-search-list .partner-search-item input[type=checkbox] { margin: 0; accent-color: #1a2b3c; pointer-events: none; flex: none; }
+  .coupon-name-search-list .partner-search-item.checked { background: #e6f7f5; font-weight: 600; }
+  .coupon-name-search-list .cn-bulk { padding: 6px 14px; font-size: 12px; color: #1a2b3c; font-weight: 700; cursor: pointer; border-bottom: 1px solid #e5e9ee; background: #f7f9fb; }
+  .coupon-name-search-list .cn-bulk:hover { background: #eef2f6; }
+  .coupon-name-chips { display: inline-flex; flex-wrap: wrap; gap: 6px; margin-left: 10px; vertical-align: middle; }
+  .coupon-name-chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #1a2b3c; background: #e6f7f5; border: 1px solid #2dd4bf; padding: 3px 8px; }
+  .coupon-name-chip button { border: 0; background: none; cursor: pointer; color: #1a2b3c; font-size: 13px; line-height: 1; padding: 0; }
+  .coupon-name-chip-clear { font-size: 12px; color: #888; background: none; border: 0; cursor: pointer; text-decoration: underline; padding: 0 2px; }
   .partner-search-list {
     display: none; position: absolute; top: calc(100% + 4px); left: 0; z-index: 20;
     width: 260px; max-height: 260px; overflow-y: auto; background: #fff;
@@ -4229,8 +4238,8 @@
   )).sort();
 
   // 쿠폰명 필터(검색 가능) — 전체 86주에 걸쳐 한 번이라도 등장한 쿠폰명을 모아 검색 대상으로 사용.
-  // 값이 비어있으면(기본) 기존 Top10+신규쿠폰 표시를 그대로 유지하고, 특정 쿠폰을 선택하면 그 쿠폰 한 줄만 표시한다.
-  let selectedCouponName = '';
+  // 선택이 비어있으면(기본) 기존 Top10+신규쿠폰 표시를 그대로 유지하고, 쿠폰을 선택하면(복수 선택 가능) 선택한 쿠폰만 표시한다.
+  let selectedCouponNames = [];
   const ALL_COUPON_NAMES = Array.from(new Set(
     ALL_WEEKS.flatMap(w => Object.keys((DATA_MAP[w] && DATA_MAP[w].쿠폰별) || {}))
   )).sort((a,b) => a.localeCompare(b, 'ko'));
@@ -4240,32 +4249,69 @@
   function renderCouponNameFilter(){
     const input = document.getElementById('couponNameSearchInput');
     const list = document.getElementById('couponNameSearchList');
+    const chips = document.getElementById('couponNameChips');
     if (!input || !list) return;
-    input.value = selectedCouponName;
+    const esc = t => String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    let lastQuery = '';
 
+    function renderChips(){
+      if (!chips) return;
+      if (!selectedCouponNames.length){ chips.innerHTML = ''; return; }
+      chips.innerHTML = selectedCouponNames.map((n,i) =>
+        `<span class="coupon-name-chip">${esc(n)}<button type="button" data-idx="${i}" title="선택 해제">×</button></span>`).join('') +
+        (selectedCouponNames.length > 1 ? '<button type="button" class="coupon-name-chip-clear">전체 해제</button>' : '');
+      chips.querySelectorAll('.coupon-name-chip button').forEach(b => b.addEventListener('click', () => {
+        selectedCouponNames.splice(Number(b.dataset.idx), 1); afterChange();
+      }));
+      const clr = chips.querySelector('.coupon-name-chip-clear');
+      if (clr) clr.addEventListener('click', () => { selectedCouponNames = []; afterChange(); });
+    }
+    function afterChange(){
+      renderChips();
+      if (list.classList.contains('open')) renderList(lastQuery);
+      renderCouponTable();
+    }
     function renderList(filterText){
-      const q = (filterText || '').trim().toLowerCase();
+      lastQuery = filterText || '';
+      const q = lastQuery.trim().toLowerCase();
       const matched = q ? ALL_COUPON_NAMES.filter(n => n.toLowerCase().includes(q)) : ALL_COUPON_NAMES;
-      let itemsHtml = `<div class="partner-search-item${selectedCouponName===''?' selected':''}" data-value="">전체 (Top10 표시)</div>`;
+      let itemsHtml = `<div class="partner-search-item${selectedCouponNames.length===0?' selected':''}" data-all="1">전체 (Top10 표시)</div>`;
+      if (q && matched.length > 1){
+        const allOn = matched.every(n => selectedCouponNames.includes(n));
+        itemsHtml += `<div class="cn-bulk" data-bulk="${allOn?'off':'on'}">${allOn?'검색 결과 선택 해제':'검색 결과 모두 선택'} (${matched.length}개)</div>`;
+      }
       if (matched.length){
-        itemsHtml += matched.map(n => `<div class="partner-search-item${n===selectedCouponName?' selected':''}" data-value="${n}">${n}</div>`).join('');
+        itemsHtml += matched.map(n => {
+          const on = selectedCouponNames.includes(n);
+          return `<div class="partner-search-item${on?' checked':''}" data-value="${esc(n)}"><input type="checkbox"${on?' checked':''} tabindex="-1"><span style="overflow:hidden;text-overflow:ellipsis;">${esc(n)}</span></div>`;
+        }).join('');
       } else if (q) {
         itemsHtml += '<div class="partner-search-empty">일치하는 쿠폰이 없습니다</div>';
       }
       list.innerHTML = itemsHtml;
       list.querySelectorAll('.partner-search-item').forEach(item => {
         item.addEventListener('click', () => {
-          selectedCouponName = item.dataset.value;
-          input.value = selectedCouponName;
-          list.classList.remove('open');
-          renderCouponTable();
+          if (item.dataset.all){ selectedCouponNames = []; input.value = ''; list.classList.remove('open'); afterChange(); return; }
+          const v = item.dataset.value;
+          const k = selectedCouponNames.indexOf(v);
+          if (k >= 0) selectedCouponNames.splice(k, 1); else selectedCouponNames.push(v);
+          afterChange();
         });
+      });
+      const bulk = list.querySelector('.cn-bulk');
+      if (bulk) bulk.addEventListener('click', () => {
+        if (bulk.dataset.bulk === 'on') matched.forEach(n => { if (!selectedCouponNames.includes(n)) selectedCouponNames.push(n); });
+        else selectedCouponNames = selectedCouponNames.filter(n => !matched.includes(n));
+        afterChange();
       });
     }
 
-    input.onfocus = () => { renderList(''); list.classList.add('open'); };
+    // 목록 클릭 시 입력창 blur로 목록이 닫히지 않도록(복수 선택 유지)
+    list.onmousedown = (e) => e.preventDefault();
+    input.onfocus = () => { renderList(input.value); list.classList.add('open'); };
     input.oninput = () => { renderList(input.value); list.classList.add('open'); };
-    input.onblur = () => { setTimeout(() => { list.classList.remove('open'); input.value = selectedCouponName; }, 150); };
+    input.onblur = () => { setTimeout(() => { list.classList.remove('open'); }, 150); };
+    renderChips();
     if (!couponNameFilterWired){
       couponNameFilterWired = true;
       document.addEventListener('click', (e) => {
@@ -4660,10 +4706,12 @@
     }).filter(e => e.cnt > 0 || e.isNew);
     entries.sort((a,b) => b.cnt - a.cnt);
     let top10Rank, couponList;
-    if (selectedCouponName){
-      // 쿠폰명 필터가 선택된 경우: Top10 여부와 무관하게 해당 쿠폰 한 줄만 표시(이번 주 사용량이 0이어도 표시).
-      const {cnt, amt} = couponFilteredCntAmt(row, selectedCouponName);
-      couponList = [{name: selectedCouponName, cnt, amt, isNew: isNewCoupon(selectedCouponName, row.주시작일)}];
+    if (selectedCouponNames.length){
+      // 쿠폰명 필터가 선택된 경우(복수 선택 가능): Top10 여부와 무관하게 선택한 쿠폰만 표시(이번 주 사용량이 0이어도 표시), 사용량 순 정렬.
+      couponList = selectedCouponNames.map(n => {
+        const {cnt, amt} = couponFilteredCntAmt(row, n);
+        return {name: n, cnt, amt, isNew: isNewCoupon(n, row.주시작일)};
+      }).sort((a,b) => b.cnt - a.cnt);
       top10Rank = new Map();
     } else {
       const top10 = entries.slice(0,10);
@@ -4715,7 +4763,7 @@
       const prevVal = couponFilteredCntAmt(prevWeek ? prevWeek.row : null, e.name);
       const prevCnt = prevVal.cnt;
       const rowCls = e.isNew ? 'new-row' : '';
-      const extraNoteTxt = rank !== '—' ? '' : (selectedCouponName ? '쿠폰명 필터로 조회 중 (Top10 밖)' : 'Top10 밖 · 최근 3주 신규라 표시');
+      const extraNoteTxt = rank !== '—' ? '' : (selectedCouponNames.length ? '쿠폰명 필터로 조회 중' : 'Top10 밖 · 최근 3주 신규라 표시');
       const nameCell = `${e.name}${e.isNew ? ' <span class="new-badge">NEW</span>' : ''}` +
         (extraNoteTxt ? `<span class="extra-note">${extraNoteTxt}</span>` : '');
       const dur = durMap[e.name];
@@ -5621,9 +5669,10 @@
           <div style="margin-bottom:10px;">
             <span style="font-size:13px; font-weight:700; color:#333; margin-right:12px;">🔍 쿠폰명 필터</span>
             <span class="partner-search-wrap">
-              <input type="text" id="couponNameSearchInput" class="partner-search-input coupon-name-search-input" placeholder="전체 (Top10 표시) · 쿠폰명 검색" autocomplete="off">
+              <input type="text" id="couponNameSearchInput" class="partner-search-input coupon-name-search-input" placeholder="전체 (Top10 표시) · 쿠폰명 검색(복수 선택)" autocomplete="off">
               <div id="couponNameSearchList" class="partner-search-list coupon-name-search-list"></div>
             </span>
+            <span id="couponNameChips" class="coupon-name-chips"></span>
           </div>
         </div>
         <div id="couponTableWrap"></div>
