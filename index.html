@@ -466,7 +466,10 @@
 
 <div class="charts-row">
   <div class="section">
-    <h2>📊 주간 트렌드 — 방문자수</h2>
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;">
+      <h2 style="margin-bottom:0;">📊 주간 트렌드 — 방문자수</h2>
+      <button class="navbtn" id="funnelVisitorYoyBtn" type="button" aria-pressed="false" title="작년 같은 주(52주 전, 요일 동일) 방문자수 선 표시">YoY</button>
+    </div>
     <div class="chart-box"><canvas id="funnelTrendVisitor"></canvas></div>
   </div>
   <div class="section">
@@ -730,17 +733,60 @@
       return wl;
     });
 
-    if (trendVisitorChart) trendVisitorChart.destroy();
-    trendVisitorChart = new Chart(document.getElementById('funnelTrendVisitor').getContext('2d'), {
-      type: 'line',
-      data: { labels: labels, datasets: [{
-        label: '방문자수', data: trendRows.map(function(r){ return r.방문자수; }),
+    // 방문자수 YoY: 작년 같은 주(364일 전, 요일 동일)의 방문자수 = data/daily-conv-data.json 일별 방문자수 7일 합
+    // (2026년 주간 레코드의 방문자수와 같은 소스·같은 방식 — 일별 UV 합산. 7일이 모두 있는 주만 표시)
+    function visitorYoyData(){
+      let daily = {};
+      try { const el = document.getElementById('daily-conv-data'); if (el && el.textContent.trim()) daily = JSON.parse(el.textContent); } catch(e){ daily = {}; }
+      return trendRows.map(function(r){
+        const s = new Date(r.주시작일 + 'T00:00:00'); s.setDate(s.getDate() - 364);
+        let sum = 0;
+        for (let i = 0; i < 7; i++){
+          const d = new Date(s); d.setDate(s.getDate() + i);
+          const k = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+          const v = daily[k] && daily[k].방문자수;
+          if (v == null) return null;
+          sum += Number(v);
+        }
+        return Math.round(sum);
+      });
+    }
+    function drawVisitorTrend(){
+      const visitorYoyOn = window.__funnelVisitorYoy === true;
+      const visitorDatasets = [{
+        label: trendYear + '년 방문자수', data: trendRows.map(function(r){ return r.방문자수; }),
         borderColor: '#1B2A4A', backgroundColor: 'rgba(27,42,74,0.08)', fill: true, tension: 0.25,
-      }] },
-      options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
-    });
+      }];
+      if (visitorYoyOn) visitorDatasets.push({
+        label: (trendYear - 1) + '년 방문자수(전년동기)', data: visitorYoyData(),
+        borderColor: '#9aa5b8', backgroundColor: 'transparent', borderDash: [6, 4], fill: false, tension: 0.25,
+        pointRadius: 2, spanGaps: true,
+      });
+      if (trendVisitorChart) trendVisitorChart.destroy();
+      trendVisitorChart = new Chart(document.getElementById('funnelTrendVisitor').getContext('2d'), {
+        type: 'line',
+        data: { labels: labels, datasets: visitorDatasets },
+        options: { responsive: true, maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: { legend: { display: visitorYoyOn, labels: { boxWidth: 14, font: { size: 11 } } },
+            tooltip: { callbacks: { label: function(c){ return c.dataset.label + ': ' + (c.parsed.y == null ? '-' : Number(c.parsed.y).toLocaleString('ko-KR')) + '명'; },
+              afterBody: function(items){
+                if (!visitorYoyOn || items.length < 2) return '';
+                const a = items[0].parsed.y, b = items[1].parsed.y;
+                if (a == null || !b) return '';
+                const r = (a / b - 1) * 100;
+                return 'YoY ' + (r >= 0 ? '+' : '') + r.toFixed(1) + '%';
+              } } } },
+          scales: { x: { ticks: { font: { size: 9 }, maxRotation: 60, minRotation: 45 } } } }
+      });
+      const visitorYoyBtn = document.getElementById('funnelVisitorYoyBtn');
+      if (visitorYoyBtn){
+        visitorYoyBtn.setAttribute('aria-pressed', visitorYoyOn ? 'true' : 'false');
+        visitorYoyBtn.style.background = visitorYoyOn ? '#1B2A4A' : '#fff'; visitorYoyBtn.style.color = visitorYoyOn ? '#fff' : '#333';
+        visitorYoyBtn.onclick = function(){ window.__funnelVisitorYoy = !visitorYoyOn; drawVisitorTrend(); };
+      }
+    }
+    drawVisitorTrend();
 
     // 두 번째 데이터셋 포인트 위에 "첫 번째 대비 두 번째 %" 라벨을 그리는 공용 플러그인
     // (포인트 간격이 좁으면 겹치지 않도록 일정 간격으로만 표시, 마지막 주는 항상 표시. 전체 값은 툴팁에서 확인)
