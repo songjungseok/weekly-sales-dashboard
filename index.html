@@ -468,7 +468,7 @@
   <div class="section">
     <div style="display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:14px;">
       <h2 style="margin-bottom:0;">📊 주간 트렌드 — 방문자수</h2>
-      <button class="navbtn" id="funnelVisitorYoyBtn" type="button" aria-pressed="false" title="작년 같은 주(52주 전, 요일 동일) 방문자수 선 표시">YoY</button>
+      <button class="navbtn" id="funnelVisitorYoyBtn" type="button" aria-pressed="true" title="작년 같은 주(52주 전, 요일 동일) 방문자수 선 표시">YoY</button>
     </div>
     <div class="chart-box"><canvas id="funnelTrendVisitor"></canvas></div>
   </div>
@@ -752,7 +752,7 @@
       });
     }
     function drawVisitorTrend(){
-      const visitorYoyOn = window.__funnelVisitorYoy === true;
+      const visitorYoyOn = window.__funnelVisitorYoy !== false; // 기본값: YoY 켜짐(첫 화면에서 전년동기 선 표시)
       const visitorDatasets = [{
         label: trendYear + '년 방문자수', data: trendRows.map(function(r){ return r.방문자수; }),
         borderColor: '#1B2A4A', backgroundColor: 'rgba(27,42,74,0.08)', fill: true, tension: 0.25,
