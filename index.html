@@ -93,6 +93,9 @@
   .kpi-grid-5 { grid-template-columns: repeat(5, 1fr); }
   @media (max-width: 1100px) { .kpi-grid-5 { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 700px) { .kpi-grid-5 { grid-template-columns: repeat(2, 1fr); } }
+  .kpi-grid-6 { grid-template-columns: repeat(6, 1fr); }
+  @media (max-width: 1100px) { .kpi-grid-6 { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 700px) { .kpi-grid-6 { grid-template-columns: repeat(2, 1fr); } }
   .kpi-card {
     background: #fff; border: 1px solid #e5e5e7; border-radius: 0; padding: 17px 18px;
   }
@@ -2039,7 +2042,7 @@
       </div>
 
       <div class="section">
-        <div class="kpi-grid kpi-grid-5" id="vehKpiGrid"></div>
+        <div class="kpi-grid kpi-grid-6" id="vehKpiGrid"></div>
       </div>
 
       <div class="section">
@@ -6326,6 +6329,10 @@
     const bep = weightedBep(vehicles);
     const achieve = bep ? Math.round(avgRev/bep*1000)/10 : null;
     const lowCount = threshold==null ? 0 : vehicles.filter(v=>v.total<=threshold).length;
+    // BEP 미달 차량: 차종 BEP가 등록된 차량 중 합계매출(VAT 제외) < 해당 차종 BEP
+    const bepVehicles = vehicles.filter(v=>vehBepMap && vehBepMap[v.carType]);
+    const bepUnderCount = bepVehicles.filter(v=>v.total < vehBepMap[v.carType]).length;
+    const bepUnderPct = bepVehicles.length ? Math.round(bepUnderCount/bepVehicles.length*1000)/10 : null;
     const bepDefBtnHtml = `
       <span style="position:relative; display:inline-block; margin-left:6px; vertical-align:middle;">
         <button type="button" id="vehBepDefToggleBtn" class="def-toggle-btn" style="font-size:9.5px; padding:2px 7px; vertical-align:middle;">ⓘ BEP정의</button>
@@ -6349,7 +6356,8 @@
       {label:'대당 평균 매출', value: fmtNum(avgRev), unit:'원', sub:'(VAT 제외)'},
       {label:'가중평균 BEP', value: bep!=null?fmtNum(bep):'—', unit:'원', sub:'(전체기준,VAT제외)'},
       {label:'BEP 달성률', value: achieve!=null?achieve+'%':'—', unit:'', sub:'대당매출 ÷ BEP', color: (achieve!=null && achieve<100) ? '#A32D2D':'#3B6D11', def:true},
-      {label:'저매출 차량', value: fmtNum(lowCount), unit:'대', sub:'(현재 기준)', color:'#A32D2D'},
+      {label:'저매출 차량', value: fmtNum(lowCount), unit:'대', sub:`(하위 ${vehLowPct}%)`, color:'#A32D2D'},
+      {label:'BEP 미달 차량', value: fmtNum(bepUnderCount), unit:'대', sub: bepUnderPct!=null ? `(BEP 등록 ${fmtNum(bepVehicles.length)}대 중 ${bepUnderPct}%)` : '(BEP 미등록)', color:'#A32D2D'},
     ];
     grid.innerHTML = cards.map(c => `
       <div class="kpi-card">
