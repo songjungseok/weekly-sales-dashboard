@@ -6357,13 +6357,13 @@
       {label:'가중평균 BEP', value: bep!=null?fmtNum(bep):'—', unit:'원', sub:'(전체기준,VAT제외)'},
       {label:'BEP 달성률', value: achieve!=null?achieve+'%':'—', unit:'', sub:'대당매출 ÷ BEP', color: (achieve!=null && achieve<100) ? '#A32D2D':'#3B6D11', def:true},
       {label:'저매출 차량', value: fmtNum(lowCount), unit:'대', sub:`(하위 ${vehLowPct}%)`, color:'#A32D2D'},
-      {label:'BEP 미달 차량', value: fmtNum(bepUnderCount), unit:'대', sub: bepUnderPct!=null ? `(BEP 등록 ${fmtNum(bepVehicles.length)}대 중 ${bepUnderPct}%)` : '(BEP 미등록)', color:'#A32D2D'},
+      {label:'BEP 미달 차량', value: fmtNum(bepUnderCount), unit:'대', sub: bepUnderPct!=null ? `(BEP 등록 ${fmtNum(bepVehicles.length)}대 중 ${bepUnderPct}%)` : '(BEP 미등록)', color:'#A32D2D', highlight:true},
     ];
     grid.innerHTML = cards.map(c => `
-      <div class="kpi-card">
-        <div class="kpi-label" style="display:flex; align-items:center;">${c.label}${c.def?bepDefBtnHtml:''}</div>
+      <div class="kpi-card"${c.highlight?' style="background:#FCEBEB; border:1px solid #F09595; border-left:4px solid #A32D2D;"':''}>
+        <div class="kpi-label" style="display:flex; align-items:center;${c.highlight?' color:#A32D2D; font-weight:700;':''}">${c.highlight?'⚠️ ':''}${c.label}${c.def?bepDefBtnHtml:''}</div>
         <div class="kpi-value"${c.color?` style="color:${c.color}"`:''}>${c.value}${c.unit?` <span style="font-size:12px;color:#999;font-weight:500;">${c.unit}</span>`:''}</div>
-        ${c.sub?`<div style="font-size:11px; color:#999;">${c.sub}</div>`:''}
+        ${c.sub?`<div style="font-size:11px; color:${c.highlight?'#A32D2D':'#999'};">${c.sub}</div>`:''}
       </div>`).join('');
     wireVehBepDefBox();
   }
