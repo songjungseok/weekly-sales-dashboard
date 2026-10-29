@@ -5708,7 +5708,7 @@
     const content = document.getElementById('content')
     const content2 = document.getElementById('content2');
     const badges = document.getElementById('badges');
-    destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendUtilization','chartTrendReuseRate']);
+    destroyCharts(['chartTrendVehCount','chartTrendCount','chartTrendRevenue','chartTrendRevPerCar','chartTrendDuration','chartTrendDistance','chartTrendFirstUse','chartTrendAvgDuration','chartTrendRevPerHour','chartTrendConvRate','chartTrendUtilization','chartTrendReuseRate','chartDowAvg']);
 
     document.getElementById('subhead').textContent =
       `데이터 보유 기간: ${MIN_WEEK} ~ ${MAX_WEEK} (총 ${ALL_WEEKS.length}주)  ·  주간 실적 기준 (월~일 7일 합산)`;
@@ -5928,6 +5928,7 @@
       if (charts['chartTrendFirstUse']) charts['chartTrendFirstUse'].resize();
       if (charts['chartTrendReuseRate']) charts['chartTrendReuseRate'].resize();
       if (charts['chartTrendUtilization']) charts['chartTrendUtilization'].resize();
+      if (charts['chartDowAvg']) charts['chartDowAvg'].resize();
     });
   }
 
