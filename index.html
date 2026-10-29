@@ -957,7 +957,7 @@
     </div>
   </div>
   <div class="chart-box" id="trendTabBox-convrate" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="convRateGranularityBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="convRateUnitLabel">단위 : % (일별 · 이번 해 vs 작년, 동일 요일 기준 비교)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendConvRate"></canvas></div></div></div>
-  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:6px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationDowBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
+  <div class="chart-box" id="trendTabBox-duration" style="display:none; height:490px;"><button type="button" id="durationTotalBtn" class="tab-btn" style="position:absolute; top:0; right:0; z-index:2; font-size:11.5px; padding:6px 14px;">전체 건수 보기</button><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:6px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationDowBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="durationMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="durationUnitLabel">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-distance" style="display:none; height:440px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 건</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendDistance"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-avgduration" style="display:none;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 시간(h)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendAvgDuration"></canvas></div></div></div>
   <div class="chart-box" id="trendTabBox-revperhour" style="display:none; height:490px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; align-self:flex-start; margin-bottom:8px; background:#eef2f6; border:1px solid #d5dbe1; border-radius: 0; padding:8px 10px;"><span id="revPerHourMetricBar" class="tab-bar" style="gap:6px;"></span></div><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;">단위 : 원</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartTrendRevPerHour"></canvas></div></div></div>
@@ -3460,6 +3460,11 @@
   let trendDurationMetric = 'count';
   const DURATION_DOWS = { all: '전체', '주중': '주중', '주말': '주말' };
   let trendDurationDow = 'all';
+  let trendDurationTotal = false; // true면 3개 구간 합계(전체)만 연도별로 표시
+  (function(){
+    const btn = document.getElementById('durationTotalBtn');
+    if (btn) btn.addEventListener('click', () => { trendDurationTotal = !trendDurationTotal; renderTrend(); });
+  })();
   function renderDurationDowBar(){
     const wrap = document.getElementById('durationDowBar');
     if (!wrap) return;
@@ -3988,7 +3993,24 @@
     const elDuration = document.getElementById('chartTrendDuration');
     if (elDuration){
       const durDatasets = [];
-      DUR_GROUPS.forEach(g => {
+      const totBtn = document.getElementById('durationTotalBtn');
+      const metricWord = trendDurationMetric === 'revenue' ? '매출' : '건수';
+      if (totBtn){
+        totBtn.textContent = trendDurationTotal ? '← 구간별 보기' : `전체 ${metricWord} 보기`;
+        totBtn.classList.toggle('active', trendDurationTotal);
+      }
+      if (trendDurationTotal) years.forEach((y,i) => {
+        durDatasets.push({
+          label: `전체 ${metricWord} (${y}년)`,
+          data: yearRowsMap[y].map(r => {
+            const vals = DUR_GROUPS.map(g => getDur(r, g.key)).filter(v => v != null);
+            return vals.length ? vals.reduce((a,b)=>a+b,0) : null;
+          }),
+          borderColor: YEAR_COLORS[y], backgroundColor: YEAR_COLORS[y],
+          fill:false, tension:0.15, spanGaps:true, pointRadius:1.5, borderWidth:2.5
+        });
+      });
+      if (!trendDurationTotal) DUR_GROUPS.forEach(g => {
         years.forEach((y,i) => {
           durDatasets.push({
             label: `${g.label} (${y}년)`, data: yearRowsMap[y].map(r => getDur(r, g.key)),
