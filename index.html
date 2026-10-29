@@ -351,6 +351,7 @@
 <script id="cohort-data" type="application/json"></script>
 <script id="repurchase-data" type="application/json"></script>
 <script id="rfm-data" type="application/json"></script>
+<script id="daily-count-data" type="application/json"></script>
 <script id="competitor-driving-fee-data" type="application/json"></script>
 <script id="competitor-rental-price-data" type="application/json"></script>
 <script>
@@ -366,6 +367,7 @@
     'cohort-data': 'data/cohort-data.json',
     'repurchase-data': 'data/repurchase-data.json',
     'rfm-data': 'data/rfm-data.json',
+    'daily-count-data': 'data/daily-count-data.json',
     'competitor-driving-fee-data': 'data/competitor-driving-fee-data.json',
     'competitor-rental-price-data': 'data/competitor-rental-price-data.json'
   };
@@ -972,6 +974,16 @@
 </div>
 
 <div id="content"></div>
+
+<div class="section" id="dowAvgSection" style="margin-top:20px;">
+  <h2>📅 요일별 일평균 건수 <span style="font-size:11.5px; color:#888; font-weight:500;">(상단 '주간 트렌드 연도 선택' 연동)</span></h2>
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:10px; background:#eef2f6; border:1px solid #d5dbe1; padding:8px 10px; align-self:flex-start; width:fit-content;">
+    <label for="dowAvgMonthSelect" style="font-weight:600; font-size:12.5px; color:#444;">월 선택</label>
+    <select id="dowAvgMonthSelect"></select>
+  </div>
+  <div class="chart-box" style="height:340px;"><div style="display:flex; flex-direction:column; height:100%;"><div style="flex:0 0 auto; font-size:11px; color:#888; margin-bottom:4px;" id="dowAvgUnitLabel">단위 : 건 (해당 월 같은 요일들의 일평균, 예약 시작일 기준)</div><div style="flex:1; position:relative; min-height:0;"><canvas id="chartDowAvg"></canvas></div></div></div>
+  <div id="dowAvgNote" style="font-size:11px; color:#999; margin-top:6px;"></div>
+</div>
 
 <div class="foot" id="footNote"></div>
 
@@ -3681,8 +3693,66 @@
         }
         selectedYears.sort((a,b) => a-b);
         renderTrend();
+        renderDowAvg();
       });
     });
+  }
+
+  // 요일별 일평균 건수 — data/daily-count-data.json(일자별 건수, 예약 시작일 기준) 사용.
+  // 선택한 월(1~12)의 각 연도(상단 연도 체크박스)별로, 요일마다 "그 달 해당 요일 건수 합 ÷ 데이터가 있는 해당 요일 일수".
+  const DOW_LABELS = ['월','화','수','목','금','토','일'];
+  let DAILY_COUNT = {};
+  try { const el = document.getElementById('daily-count-data'); if (el && el.textContent.trim()) DAILY_COUNT = JSON.parse(el.textContent); } catch(e){ DAILY_COUNT = {}; }
+  let dowAvgMonth = null;
+  function renderDowAvg(){
+    const sel = document.getElementById('dowAvgMonthSelect');
+    const el = document.getElementById('chartDowAvg');
+    if (!sel || !el) return;
+    const dates = Object.keys(DAILY_COUNT).sort();
+    if (dowAvgMonth === null){
+      dowAvgMonth = dates.length ? Number(dates[dates.length-1].slice(5,7)) : (new Date().getMonth()+1);
+      sel.innerHTML = Array.from({length:12}, (_,i) => `<option value="${i+1}"${i+1===dowAvgMonth?' selected':''}>${i+1}월</option>`).join('');
+      sel.addEventListener('change', () => { dowAvgMonth = Number(sel.value); renderDowAvg(); });
+    }
+    const years = selectedYears.slice().sort((a,b) => a-b);
+    const mm = String(dowAvgMonth).padStart(2,'0');
+    const notes = [];
+    const datasets = [];
+    years.forEach(y => {
+      const sum = [0,0,0,0,0,0,0], cnt = [0,0,0,0,0,0,0];
+      dates.forEach(d => {
+        if (d.slice(0,4) !== String(y) || d.slice(5,7) !== mm) return;
+        const wd = (parseDate(d).getDay() + 6) % 7; // 월=0 … 일=6
+        sum[wd] += DAILY_COUNT[d]; cnt[wd] += 1;
+      });
+      const nDays = cnt.reduce((a,b)=>a+b,0);
+      if (!nDays) { notes.push(`${y}년 ${dowAvgMonth}월 데이터 없음`); return; }
+      const ym = dates.filter(d => d.slice(0,4)===String(y) && d.slice(5,7)===mm);
+      notes.push(`${y}년 ${dowAvgMonth}월: ${nDays}일 반영 (${ym[0].slice(5).replace('-','/')}~${ym[ym.length-1].slice(5).replace('-','/')})`);
+      datasets.push({
+        label: `${y}년`, backgroundColor: YEAR_COLORS[y],
+        data: sum.map((s,i) => cnt[i] ? Math.round(s / cnt[i]) : null),
+        dayCounts: cnt.slice()
+      });
+    });
+    if (charts['chartDowAvg']) { charts['chartDowAvg'].destroy(); delete charts['chartDowAvg']; }
+    charts['chartDowAvg'] = new Chart(el.getContext('2d'), {
+      type: 'bar',
+      data: { labels: DOW_LABELS, datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position:'top', labels:{boxWidth:8,usePointStyle:true,pointStyle:'circle',font:{size:11}} },
+          tooltip: { callbacks: { label: (ctx) => {
+            const v = ctx.raw; const n = ctx.dataset.dayCounts[ctx.dataIndex];
+            return `${ctx.dataset.label}: ${v==null?'—':v.toLocaleString()}건 (${n}일 평균)`;
+          } } }
+        },
+        scales: { y: { beginAtZero:true, ticks:{font:{size:10}} }, x: { ticks:{font:{size:12, weight:'600'}} } }
+      }
+    });
+    const noteEl = document.getElementById('dowAvgNote');
+    if (noteEl) noteEl.textContent = notes.join(' · ') + (notes.length ? ' — 진행 중인 달은 대시보드에 반영된 마지막 주(일요일)까지만 집계' : '');
   }
 
   function topN(dict, n){
@@ -5873,6 +5943,7 @@
   renderCouponDurCheckboxes();
   renderRevCompositionBar();
   renderTrend();
+  renderDowAvg();
   renderPartnerFilterBar();
   renderPartnerGranularityBar();
   renderPartnerRevTrend();
